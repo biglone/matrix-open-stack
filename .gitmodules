@@ -1,0 +1,3 @@
+[submodule "matrix-core/conduwuit"]
+	path = matrix-core/conduwuit
+	url = https://github.com/girlbossceo/conduwuit.git

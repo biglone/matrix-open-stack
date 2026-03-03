@@ -1,0 +1,10 @@
+FROM alpine:3.20
+
+RUN addgroup -S conduwuit && adduser -S -G conduwuit conduwuit
+COPY bin/conduwuit /usr/local/bin/conduwuit
+RUN chmod 755 /usr/local/bin/conduwuit
+
+USER conduwuit
+EXPOSE 6167
+ENTRYPOINT ["/usr/local/bin/conduwuit"]
+CMD ["--config", "/etc/conduwuit/conduwuit.toml"]

@@ -1,0 +1,14 @@
+# Runtime data
+bin/conduwuit
+data/
+backups/
+
+# Secrets
+.env
+credentials.txt
+*.json
+
+# Python/OS junk
+__pycache__/
+*.pyc
+.DS_Store

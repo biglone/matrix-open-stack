@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Control Panel</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      .container {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        margin: 8px 0 6px;
+        font-size: 14px;
+      }
+      input,
+      textarea,
+      select,
+      button {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #475569;
+        background: #0f172a;
+        color: #f8fafc;
+      }
+      textarea {
+        min-height: 76px;
+        resize: vertical;
+      }
+      button {
+        margin-top: 10px;
+        background: #2563eb;
+        border: 0;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+      .muted {
+        color: #94a3b8;
+        font-size: 13px;
+      }
+      .status {
+        white-space: pre-wrap;
+        margin-top: 8px;
+        font-size: 13px;
+      }
+      code {
+        background: #0b1220;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Matrix Control Panel</h1>
+      <p class="muted">
+        This panel calls <code>/api/*</code>. If <code>CONTROL_API_TOKEN</code>
+        is configured, fill it below.
+      </p>
+
+      <div class="card">
+        <label for="token">Bearer Token</label>
+        <input id="token" placeholder="CONTROL_API_TOKEN" />
+        <button id="btn-check">Check API Config</button>
+        <div id="config-status" class="status"></div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Create Space</h3>
+          <label>Name</label>
+          <input id="space-name" placeholder="Engineering Space" />
+          <label>Topic</label>
+          <input id="space-topic" placeholder="Internal collaboration" />
+          <label>Alias Localpart (optional)</label>
+          <input id="space-alias" placeholder="engineering-space" />
+          <label>Invitees (comma-separated user IDs)</label>
+          <textarea id="space-invitees" placeholder="@user:matrix.biglone.tech,@bot:matrix.biglone.tech"></textarea>
+          <label>Child Room IDs (comma-separated, optional)</label>
+          <textarea id="space-children" placeholder="!roomA:matrix.biglone.tech,!roomB:matrix.biglone.tech"></textarea>
+          <button id="btn-space">Create Space</button>
+          <div id="space-status" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h3>Create Room</h3>
+          <label>Name</label>
+          <input id="room-name" placeholder="Ops Room" />
+          <label>Topic</label>
+          <input id="room-topic" placeholder="Operations coordination" />
+          <label>Visibility</label>
+          <select id="room-private">
+            <option value="true">Private</option>
+            <option value="false">Public</option>
+          </select>
+          <label>Alias Localpart (optional)</label>
+          <input id="room-alias" placeholder="ops-room" />
+          <label>Invitees (comma-separated user IDs)</label>
+          <textarea id="room-invitees" placeholder="@user:matrix.biglone.tech"></textarea>
+          <label>Parent Space Room ID (optional)</label>
+          <input id="room-space-id" placeholder="!spaceId:matrix.biglone.tech" />
+          <button id="btn-room">Create Room</button>
+          <div id="room-status" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h3>Create Bot User</h3>
+          <label>Username (without @ and domain)</label>
+          <input id="bot-username" placeholder="opsbot" />
+          <label>Password</label>
+          <input id="bot-password" type="password" placeholder="Strong password" />
+          <label>Display Name (optional)</label>
+          <input id="bot-display-name" placeholder="Ops Bot" />
+          <button id="btn-bot">Create Bot User</button>
+          <div id="bot-status" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h3>Invite Bot to Room</h3>
+          <label>Bot User ID</label>
+          <input id="invite-user-id" placeholder="@opsbot:matrix.biglone.tech" />
+          <label>Room ID</label>
+          <input id="invite-room-id" placeholder="!roomId:matrix.biglone.tech" />
+          <button id="btn-invite">Invite Bot</button>
+          <div id="invite-status" class="status"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const tokenEl = document.getElementById("token");
+      tokenEl.value = localStorage.getItem("matrix_control_token") || "";
+      tokenEl.addEventListener("change", () => {
+        localStorage.setItem("matrix_control_token", tokenEl.value.trim());
+      });
+
+      function parseCSV(value) {
+        return value
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean);
+      }
+
+      async function callApi(path, payload, statusEl) {
+        statusEl.textContent = "Processing...";
+        const headers = { "Content-Type": "application/json" };
+        const token = tokenEl.value.trim();
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        try {
+          const response = await fetch(path, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            statusEl.textContent = `ERROR ${response.status}: ${JSON.stringify(data, null, 2)}`;
+            return;
+          }
+          statusEl.textContent = JSON.stringify(data, null, 2);
+        } catch (err) {
+          statusEl.textContent = `REQUEST FAILED: ${err}`;
+        }
+      }
+
+      document.getElementById("btn-check").addEventListener("click", async () => {
+        const el = document.getElementById("config-status");
+        el.textContent = "Loading...";
+        const headers = {};
+        const token = tokenEl.value.trim();
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        try {
+          const response = await fetch("/api/config", { headers });
+          const data = await response.json().catch(() => ({}));
+          el.textContent = response.ok
+            ? JSON.stringify(data, null, 2)
+            : `ERROR ${response.status}: ${JSON.stringify(data, null, 2)}`;
+        } catch (err) {
+          el.textContent = `REQUEST FAILED: ${err}`;
+        }
+      });
+
+      document.getElementById("btn-space").addEventListener("click", () => {
+        callApi(
+          "/api/spaces",
+          {
+            name: document.getElementById("space-name").value.trim(),
+            topic: document.getElementById("space-topic").value.trim() || null,
+            alias_localpart: document.getElementById("space-alias").value.trim() || null,
+            invitees: parseCSV(document.getElementById("space-invitees").value),
+            child_room_ids: parseCSV(document.getElementById("space-children").value),
+          },
+          document.getElementById("space-status")
+        );
+      });
+
+      document.getElementById("btn-room").addEventListener("click", () => {
+        callApi(
+          "/api/rooms",
+          {
+            name: document.getElementById("room-name").value.trim(),
+            topic: document.getElementById("room-topic").value.trim() || null,
+            is_private: document.getElementById("room-private").value === "true",
+            alias_localpart: document.getElementById("room-alias").value.trim() || null,
+            invitees: parseCSV(document.getElementById("room-invitees").value),
+            space_room_id: document.getElementById("room-space-id").value.trim() || null,
+          },
+          document.getElementById("room-status")
+        );
+      });
+
+      document.getElementById("btn-bot").addEventListener("click", () => {
+        callApi(
+          "/api/bots",
+          {
+            username: document.getElementById("bot-username").value.trim(),
+            password: document.getElementById("bot-password").value.trim(),
+            display_name: document.getElementById("bot-display-name").value.trim() || null,
+          },
+          document.getElementById("bot-status")
+        );
+      });
+
+      document.getElementById("btn-invite").addEventListener("click", () => {
+        callApi(
+          "/api/bots/invite",
+          {
+            bot_user_id: document.getElementById("invite-user-id").value.trim(),
+            room_id: document.getElementById("invite-room-id").value.trim(),
+          },
+          document.getElementById("invite-status")
+        );
+      });
+    </script>
+  </body>
+</html>

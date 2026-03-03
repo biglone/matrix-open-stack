@@ -1,0 +1,73 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  matrix:
+    build:
+      context: .
+      dockerfile: Dockerfile.conduwuit
+    image: local/conduwuit:${CONDUWUIT_VERSION:-v0.4.6}
+    restart: unless-stopped
+    init: true
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "127.0.0.1:${MATRIX_PORT:-6167}:6167"
+    volumes:
+      - ./conf/conduwuit.toml:/etc/conduwuit/conduwuit.toml:ro
+      - ./data:/var/lib/conduwuit
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O /dev/null http://127.0.0.1:6167/_matrix/client/versions || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *default-logging
+
+  matrix-control-api:
+    build:
+      context: ./control-plane
+      dockerfile: Dockerfile
+    image: local/matrix-control-api:0.1.0
+    restart: unless-stopped
+    init: true
+    depends_on:
+      matrix:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${MATRIX_CONTROL_PORT:-6180}:8080"
+    environment:
+      MATRIX_BASE_URL: "http://matrix:6167"
+      MATRIX_SERVER_NAME: "${MATRIX_SERVER_NAME:-matrix.example.com}"
+      MATRIX_ADMIN_USER: "${MATRIX_ADMIN_USER:-}"
+      MATRIX_ADMIN_PASSWORD: "${MATRIX_ADMIN_PASSWORD:-}"
+      MATRIX_ADMIN_TOKEN: "${MATRIX_ADMIN_TOKEN:-}"
+      CONTROL_API_TOKEN: "${CONTROL_API_TOKEN:-}"
+      EXPOSE_BOT_ACCESS_TOKEN: "${EXPOSE_BOT_ACCESS_TOKEN:-false}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')\" >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    stop_grace_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *default-logging

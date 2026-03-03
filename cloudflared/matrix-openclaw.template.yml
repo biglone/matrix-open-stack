@@ -1,0 +1,10 @@
+# Copy to ~/.cloudflared/matrix-openclaw.yml and fill placeholders.
+tunnel: <TUNNEL_ID>
+credentials-file: <CREDENTIALS_FILE_ABS_PATH>
+
+ingress:
+  - hostname: <MATRIX_DOMAIN>
+    service: http://127.0.0.1:6167
+  - hostname: <MATRIX_ADMIN_DOMAIN>
+    service: http://127.0.0.1:6180
+  - service: http_status:404
