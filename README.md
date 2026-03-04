@@ -175,3 +175,19 @@ git clone https://github.com/girlbossceo/conduwuit.git
 ./scripts/restart.sh tunnel
 ./scripts/restart.sh status
 ```
+
+## Temporary Registration Window
+
+For short-term onboarding (users and bots) with auto-close:
+
+```bash
+./scripts/open_registration_window.sh --minutes 10
+```
+
+This temporarily enables:
+
+- Conduwuit registration (`allow_registration=true`)
+- `USER_CREATE_MODE=legacy_register`
+- `BOT_CREATE_MODE=legacy_register`
+
+Then it auto-restores secure defaults after the window ends.

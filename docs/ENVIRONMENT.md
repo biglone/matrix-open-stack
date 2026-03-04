@@ -94,6 +94,16 @@ docker compose up -d --build
   - `DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)`
   - 重建控制面容器：`docker compose up -d --force-recreate matrix-control-api`
 
+### 想临时开放注册（用户/机器人）后自动关回去？
+
+使用：
+
+```bash
+./scripts/open_registration_window.sh --minutes 10
+```
+
+脚本会在窗口期临时启用注册与 API 创建模式，结束后自动恢复为安全配置。
+
 ## 安全提醒
 
 - 不要提交 `.env`、`data/`、cloudflared 凭据文件
