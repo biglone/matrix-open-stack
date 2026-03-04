@@ -18,6 +18,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$BASE_DIR/docker-compose.yml"
 CONFIG_FILE="$BASE_DIR/conf/conduwuit.toml"
+AUDIT_DIR="$BASE_DIR/audit"
+AUDIT_FILE="$AUDIT_DIR/security-audit.log"
+ACTOR="${SUDO_USER:-${USER:-unknown}}"
 
 USERNAME=""
 DISPLAY_NAME=""
@@ -60,6 +63,32 @@ if [ -z "$server_name" ]; then
   exit 1
 fi
 
+mkdir -p "$AUDIT_DIR"
+chmod 700 "$AUDIT_DIR" 2>/dev/null || true
+
+audit_log() {
+  local status="$1"
+  local message="$2"
+  local safe_user_id="${user_id:-}"
+  local payload
+  payload="$(jq -cn \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg event "create_bot_secure" \
+    --arg status "$status" \
+    --arg actor "$ACTOR" \
+    --arg username "$USERNAME" \
+    --arg user_id "$safe_user_id" \
+    --arg display_name "$DISPLAY_NAME" \
+    --arg message "$message" \
+    '{ts:$ts,event:$event,status:$status,actor:$actor,username:$username,user_id:$user_id,display_name:$display_name,message:$message}')"
+  if ! printf "%s\n" "$payload" >> "$AUDIT_FILE"; then
+    echo "WARN: failed to write audit log to $AUDIT_FILE" >&2
+    echo "$payload" >&2
+  fi
+}
+
+audit_log "start" "begin secure bot creation"
+
 was_running=0
 if docker compose -f "$COMPOSE_FILE" ps --status running --services | grep -qx "matrix"; then
   was_running=1
@@ -73,6 +102,7 @@ restore_stack() {
 }
 trap restore_stack EXIT
 
+# Run admin command without explicit password so the server generates a strong password.
 # Conduwuit keeps running after --execute; use timeout to stop the one-shot container after command output is emitted.
 raw_output="$(timeout --signal=TERM 35s docker compose -f "$COMPOSE_FILE" run --rm --no-deps matrix --config /etc/conduwuit/conduwuit.toml --execute "users create-user $USERNAME" 2>&1 || true)"
 clean_output="$(printf "%s" "$raw_output" | sed -r 's/\x1B\[[0-9;]*[A-Za-z]//g')"
@@ -84,6 +114,7 @@ password="$(printf "%s" "$oneline" | sed -n 's/.*Created user with user_id:[[:sp
 if [ -z "$user_id" ] || [ -z "$password" ]; then
   echo "Failed to create bot user. Raw output:" >&2
   printf "%s\n" "$clean_output" >&2
+  audit_log "failed" "failed to parse create-user output"
   exit 1
 fi
 
@@ -115,8 +146,11 @@ if [ -n "$DISPLAY_NAME" ]; then
       -d "{\"displayname\":\"$DISPLAY_NAME\"}" >/dev/null || true
   else
     echo "WARN: Bot created, but failed to set display name automatically." >&2
+    audit_log "warn" "bot created but display name setup failed"
   fi
 fi
+
+audit_log "ok" "bot user created"
 
 echo "Bot user created securely."
 echo "user_id=$user_id"

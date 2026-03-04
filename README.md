@@ -3,7 +3,7 @@
 Open-source Matrix stack with:
 
 - Conduwuit (Matrix homeserver)
-- Matrix Control API (create spaces/rooms/bot users)
+- Matrix Control API (create spaces/rooms and manage bot workflows)
 - Web control panel
 - Cloudflared template for public exposure
 
@@ -44,6 +44,10 @@ Local URLs:
    - `MATRIX_SERVER_NAME`
    - `MATRIX_ADMIN_USER` / `MATRIX_ADMIN_PASSWORD` (or `MATRIX_ADMIN_TOKEN`)
    - `CONTROL_API_TOKEN`
+3. Optional hardening controls:
+   - `BOT_CREATE_MODE` (default `disabled`)
+   - `AUDIT_LOG_PATH` (default `/var/log/matrix-control/audit.log`)
+   - `INVITE_RATE_LIMIT_WINDOW_SECONDS` / `INVITE_RATE_LIMIT_MAX`
 
 ## Cloudflared (Public Access)
 
@@ -66,6 +70,13 @@ Create bot users through local secure script (no open registration required):
 ```
 
 The script performs a short maintenance window and prints generated credentials once.
+
+`POST /api/bots/invite` has built-in throttling and audit logs:
+
+- per IP + token fingerprint rate limit
+- default `12` invites per `60` seconds
+- logs written to `./audit/audit.log`
+- secure bot creation logs written to `./audit/security-audit.log`
 
 ## Source Development (Optional)
 

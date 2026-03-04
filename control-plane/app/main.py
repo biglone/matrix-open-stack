@@ -1,17 +1,32 @@
 import os
 import secrets
 import string
+import hashlib
+import json
+import threading
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 APP_DIR = Path(__file__).resolve().parent
 INDEX_HTML = APP_DIR / "static" / "index.html"
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return default
 
 
 class Settings(BaseModel):
@@ -23,11 +38,16 @@ class Settings(BaseModel):
     control_api_token: str = os.getenv("CONTROL_API_TOKEN", "")
     expose_bot_access_token: bool = os.getenv("EXPOSE_BOT_ACCESS_TOKEN", "false").lower() == "true"
     bot_create_mode: str = os.getenv("BOT_CREATE_MODE", "disabled").strip().lower()
+    audit_log_path: str = os.getenv("AUDIT_LOG_PATH", "/var/log/matrix-control/audit.log")
+    invite_rate_limit_window_seconds: int = _env_int("INVITE_RATE_LIMIT_WINDOW_SECONDS", 60)
+    invite_rate_limit_max: int = _env_int("INVITE_RATE_LIMIT_MAX", 12)
 
 
 settings = Settings()
 app = FastAPI(title="Matrix Control API", version="0.1.0")
 _token_cache: str | None = None
+_invite_rate_lock = threading.Lock()
+_invite_rate_hits: dict[str, list[float]] = {}
 
 
 class RoomCreateRequest(BaseModel):
@@ -87,16 +107,25 @@ async def _get_admin_token() -> str:
             detail="Matrix admin credentials missing. Set MATRIX_ADMIN_TOKEN or MATRIX_ADMIN_USER/MATRIX_ADMIN_PASSWORD.",
         )
 
-    payload = {
-        "type": "m.login.password",
-        "user": settings.matrix_admin_user,
-        "password": settings.matrix_admin_password,
-    }
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(f"{settings.matrix_base_url}/_matrix/client/v3/login", json=payload)
+    candidates = [settings.matrix_admin_user]
+    if not settings.matrix_admin_user.startswith("@"):
+        candidates.append(f"@{settings.matrix_admin_user}:{settings.matrix_server_name}")
 
-    if response.status_code >= 400:
-        raise HTTPException(status_code=502, detail=f"Matrix login failed: {_matrix_error_message(response)}")
+    response: httpx.Response | None = None
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        for candidate in candidates:
+            payload = {
+                "type": "m.login.password",
+                "user": candidate,
+                "password": settings.matrix_admin_password,
+            }
+            response = await client.post(f"{settings.matrix_base_url}/_matrix/client/v3/login", json=payload)
+            if response.status_code < 400:
+                break
+
+    if response is None or response.status_code >= 400:
+        detail = _matrix_error_message(response) if response is not None else "unknown login failure"
+        raise HTTPException(status_code=502, detail=f"Matrix login failed: {detail}")
 
     body = response.json()
     access_token = body.get("access_token")
@@ -165,6 +194,54 @@ def _generate_password(length: int = 24) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
+def _audit_log(event: str, status: str, details: dict[str, Any]) -> None:
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "event": event,
+        "status": status,
+        **details,
+    }
+    payload = json.dumps(record, ensure_ascii=True)
+
+    path = settings.audit_log_path.strip()
+    if not path:
+        print(payload)
+        return
+
+    try:
+        log_path = Path(path)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(payload + "\n")
+    except Exception:
+        print(payload)
+
+
+def _invite_principal_key(request: Request, authorization: str | None) -> tuple[str, str]:
+    client_ip = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "unknown")
+    token = ""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.removeprefix("Bearer ").strip()
+
+    token_fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()[:12] if token else "no-token"
+    return f"{client_ip}:{token_fingerprint}", client_ip
+
+
+def _check_invite_rate_limit(principal_key: str) -> tuple[bool, int]:
+    now = time.time()
+    window = settings.invite_rate_limit_window_seconds
+    max_hits = settings.invite_rate_limit_max
+
+    with _invite_rate_lock:
+        hits = _invite_rate_hits.setdefault(principal_key, [])
+        hits[:] = [ts for ts in hits if now - ts < window]
+        if len(hits) >= max_hits:
+            retry_after = max(1, int(window - (now - hits[0])))
+            return False, retry_after
+        hits.append(now)
+    return True, 0
+
+
 async def _link_space_child(space_room_id: str, child_room_id: str) -> None:
     encoded_space = quote(space_room_id, safe="")
     encoded_child = quote(child_room_id, safe="")
@@ -194,6 +271,8 @@ async def api_config() -> dict[str, Any]:
         "token_protection_enabled": bool(settings.control_api_token.strip()),
         "bot_access_token_exposed": settings.expose_bot_access_token,
         "bot_create_mode": settings.bot_create_mode,
+        "invite_rate_limit_window_seconds": settings.invite_rate_limit_window_seconds,
+        "invite_rate_limit_max": settings.invite_rate_limit_max,
     }
 
 
@@ -245,6 +324,14 @@ async def create_space(request: SpaceCreateRequest) -> dict[str, Any]:
 async def create_bot(request: BotCreateRequest) -> dict[str, Any]:
     # Keep bot account creation disabled by default to avoid depending on open registration.
     if settings.bot_create_mode != "legacy_register":
+        _audit_log(
+            "bot_create_api",
+            "blocked",
+            {
+                "username": request.username,
+                "reason": "bot_create_mode_disabled",
+            },
+        )
         raise HTTPException(
             status_code=403,
             detail="Bot creation via API is disabled for security. Use scripts/create_bot_secure.sh on the host.",
@@ -273,15 +360,72 @@ async def create_bot(request: BotCreateRequest) -> dict[str, Any]:
     response: dict[str, Any] = {"user_id": user_id}
     if settings.expose_bot_access_token and access_token:
         response["access_token"] = access_token
+    _audit_log(
+        "bot_create_api",
+        "ok",
+        {
+            "username": request.username,
+            "user_id": user_id,
+            "mode": "legacy_register",
+        },
+    )
     return response
 
 
-@app.post("/api/bots/invite", dependencies=[Depends(_require_control_token)])
-async def invite_bot(request: BotInviteRequest) -> dict[str, Any]:
-    encoded_room = quote(request.room_id, safe="")
-    await _matrix_request(
-        "POST",
-        f"/_matrix/client/v3/rooms/{encoded_room}/invite",
-        json_body={"user_id": request.bot_user_id},
+@app.post("/api/bots/invite")
+async def invite_bot(
+    payload: BotInviteRequest,
+    http_request: Request,
+    authorization: str | None = Header(default=None),
+    _auth: None = Depends(_require_control_token),
+) -> dict[str, Any]:
+    principal_key, client_ip = _invite_principal_key(http_request, authorization)
+    allowed, retry_after = _check_invite_rate_limit(principal_key)
+    if not allowed:
+        _audit_log(
+            "bot_invite",
+            "rate_limited",
+            {
+                "bot_user_id": payload.bot_user_id,
+                "room_id": payload.room_id,
+                "client_ip": client_ip,
+                "retry_after_seconds": retry_after,
+            },
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=f"Invite rate limit exceeded. Retry in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    encoded_room = quote(payload.room_id, safe="")
+    try:
+        await _matrix_request(
+            "POST",
+            f"/_matrix/client/v3/rooms/{encoded_room}/invite",
+            json_body={"user_id": payload.bot_user_id},
+        )
+    except HTTPException as exc:
+        _audit_log(
+            "bot_invite",
+            "failed",
+            {
+                "bot_user_id": payload.bot_user_id,
+                "room_id": payload.room_id,
+                "client_ip": client_ip,
+                "http_status": exc.status_code,
+                "error": str(exc.detail),
+            },
+        )
+        raise
+
+    _audit_log(
+        "bot_invite",
+        "ok",
+        {
+            "bot_user_id": payload.bot_user_id,
+            "room_id": payload.room_id,
+            "client_ip": client_ip,
+        },
     )
     return {"ok": True}

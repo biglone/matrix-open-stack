@@ -2,6 +2,7 @@
 bin/conduwuit
 data/
 backups/
+audit/
 
 # Secrets
 .env

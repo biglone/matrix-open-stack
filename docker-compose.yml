@@ -42,11 +42,14 @@ services:
     image: local/matrix-control-api:0.1.0
     restart: unless-stopped
     init: true
+    user: "${PUID:-1000}:${PGID:-1000}"
     depends_on:
       matrix:
         condition: service_healthy
     ports:
       - "127.0.0.1:${MATRIX_CONTROL_PORT:-6180}:8080"
+    volumes:
+      - ./audit:/var/log/matrix-control
     environment:
       MATRIX_BASE_URL: "http://matrix:6167"
       MATRIX_SERVER_NAME: "${MATRIX_SERVER_NAME:-matrix.example.com}"
@@ -56,6 +59,9 @@ services:
       CONTROL_API_TOKEN: "${CONTROL_API_TOKEN:-}"
       EXPOSE_BOT_ACCESS_TOKEN: "${EXPOSE_BOT_ACCESS_TOKEN:-false}"
       BOT_CREATE_MODE: "${BOT_CREATE_MODE:-disabled}"
+      AUDIT_LOG_PATH: "${AUDIT_LOG_PATH:-/var/log/matrix-control/audit.log}"
+      INVITE_RATE_LIMIT_WINDOW_SECONDS: "${INVITE_RATE_LIMIT_WINDOW_SECONDS:-60}"
+      INVITE_RATE_LIMIT_MAX: "${INVITE_RATE_LIMIT_MAX:-12}"
     healthcheck:
       test:
         [
