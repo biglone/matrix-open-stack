@@ -1,165 +1,1373 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Matrix Control Panel</title>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        background: #0f172a;
-        color: #e2e8f0;
+      :root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-2: #f1f5f9;
+        --border: #cbd5e1;
+        --text: #0f172a;
+        --muted: #475569;
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --ok: #16a34a;
+        --warn: #d97706;
+        --danger: #dc2626;
       }
-      .container {
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 24px;
-      }
-      h1 {
-        margin-top: 0;
-      }
-      .card {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-      }
-      label {
-        display: block;
-        margin: 8px 0 6px;
-        font-size: 14px;
-      }
-      input,
-      textarea,
-      select,
-      button {
-        width: 100%;
+
+      * {
         box-sizing: border-box;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #475569;
-        background: #0f172a;
-        color: #f8fafc;
       }
-      textarea {
-        min-height: 76px;
-        resize: vertical;
+
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top right, #dbeafe, transparent 40%), var(--bg);
+        color: var(--text);
+        font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
       }
-      button {
-        margin-top: 10px;
-        background: #2563eb;
-        border: 0;
-        cursor: pointer;
-      }
-      button:hover {
-        background: #1d4ed8;
-      }
-      .grid {
+
+      .app-shell {
+        min-height: 100vh;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 16px;
+        grid-template-columns: 292px minmax(0, 1fr);
       }
-      .muted {
+
+      .sidebar {
+        background: linear-gradient(180deg, #0f172a, #111827 65%);
+        color: #e2e8f0;
+        padding: 18px;
+        border-right: 1px solid rgba(148, 163, 184, 0.24);
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .brand-sub {
+        margin: 6px 0 16px;
         color: #94a3b8;
         font-size: 13px;
       }
-      .status {
-        white-space: pre-wrap;
-        margin-top: 8px;
+
+      .icon {
+        width: 18px;
+        height: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+      }
+
+      .icon svg {
+        width: 100%;
+        height: 100%;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .menu {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .menu-group {
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.35);
+        overflow: hidden;
+      }
+
+      .menu-group summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        color: #dbeafe;
+      }
+
+      .menu-group summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .menu-group summary::after {
+        content: "▾";
+        margin-left: auto;
+        color: #94a3b8;
+        transition: transform 0.18s ease;
+      }
+
+      .menu-group:not([open]) summary::after {
+        transform: rotate(-90deg);
+      }
+
+      .menu-items {
+        display: grid;
+        gap: 6px;
+        padding: 0 8px 10px;
+      }
+
+      .menu-items button {
+        width: 100%;
+        text-align: left;
+        min-height: 44px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(15, 23, 42, 0.45);
+        color: #e2e8f0;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .menu-items button:hover {
+        background: rgba(37, 99, 235, 0.24);
+      }
+
+      .menu-items button.active {
+        background: linear-gradient(120deg, #1d4ed8, #3b82f6);
+        border-color: rgba(147, 197, 253, 0.8);
+      }
+
+      .main {
+        padding: 18px;
+      }
+
+      .topbar {
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .topbar-actions > label {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .topbar-actions select {
+        width: auto;
+        min-width: 118px;
+      }
+
+      button.compact {
+        width: auto;
+        min-height: 38px;
+        padding: 8px 12px;
+      }
+
+      .connection-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 6px 10px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .connection-pill .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #94a3b8;
+      }
+
+      .connection-pill.ok {
+        border-color: #86efac;
+        color: #166534;
+      }
+
+      .connection-pill.ok .dot {
+        background: #16a34a;
+      }
+
+      .connection-pill.err {
+        border-color: #fca5a5;
+        color: #991b1b;
+      }
+
+      .connection-pill.err .dot {
+        background: #dc2626;
+      }
+
+      .settings-drawer {
+        margin-bottom: 12px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+        padding: 14px;
+      }
+
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        color: #334155;
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .crumb-current {
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .crumb-sep {
+        color: #64748b;
+      }
+
+      .hero {
+        background: linear-gradient(120deg, #1e3a8a, #2563eb 60%, #3b82f6);
+        color: #eff6ff;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 20px;
+        margin-bottom: 14px;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      .hero p {
+        margin: 8px 0 0;
+        color: #dbeafe;
+      }
+
+      .view {
+        display: none;
+        gap: 12px;
+      }
+
+      .view.active {
+        display: grid;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+      }
+
+      .panel h2,
+      .panel h3 {
+        margin: 0 0 8px;
+      }
+
+      .hint {
+        margin: 0 0 10px;
+        color: var(--muted);
         font-size: 13px;
       }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .row > * {
+        flex: 1;
+        min-width: 220px;
+      }
+
+      label {
+        display: block;
+        margin: 10px 0 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        padding: 10px 12px;
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus,
+      button:focus {
+        outline: 2px solid rgba(37, 99, 235, 0.35);
+        outline-offset: 1px;
+      }
+
+      textarea {
+        min-height: 84px;
+        resize: vertical;
+      }
+
+      button {
+        cursor: pointer;
+        min-height: 44px;
+        border: 0;
+        font-weight: 600;
+        background: var(--primary);
+        color: #fff;
+        transition: background-color 0.18s ease;
+      }
+
+      button:hover {
+        background: var(--primary-dark);
+      }
+
+      button.secondary {
+        background: #0f172a;
+      }
+
+      button.secondary:hover {
+        background: #1e293b;
+      }
+
+      button.warn {
+        background: var(--warn);
+      }
+
+      button.warn:hover {
+        background: #b45309;
+      }
+
+      button.danger {
+        background: var(--danger);
+      }
+
+      button.danger:hover {
+        background: #b91c1c;
+      }
+
+      button.ghost {
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      button.ghost:hover {
+        background: #e2e8f0;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 10px;
+      }
+
+      .stat {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      .stat .label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .stat .value {
+        margin-top: 4px;
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .resource-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .resource-tabs button {
+        width: auto;
+        min-width: 110px;
+        min-height: 38px;
+        padding: 8px 12px;
+      }
+
+      .resource-tabs button.active {
+        background: linear-gradient(120deg, #1d4ed8, #3b82f6);
+      }
+
+      .resource-pane {
+        display: none;
+      }
+
+      .resource-pane.active {
+        display: block;
+      }
+
+      .table-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .table-toolbar input {
+        min-width: 220px;
+      }
+
+      .table-wrap {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: auto;
+        max-height: 52vh;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 560px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 9px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 13px;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--surface-2);
+        color: var(--muted);
+      }
+
       code {
-        background: #0b1220;
-        padding: 2px 5px;
-        border-radius: 4px;
+        background: #eef2ff;
+        border-radius: 6px;
+        padding: 2px 6px;
+      }
+
+      .status {
+        margin-top: 10px;
+        white-space: pre-wrap;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-2);
+        font-size: 13px;
+        padding: 10px;
+      }
+
+      .status.ok {
+        color: #166534;
+        border-color: #86efac;
+        background: #f0fdf4;
+      }
+
+      .status.warn {
+        color: #92400e;
+        border-color: #fcd34d;
+        background: #fffbeb;
+      }
+
+      .status.err {
+        color: #991b1b;
+        border-color: #fca5a5;
+        background: #fef2f2;
+      }
+
+      .table-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .table-actions button {
+        width: auto;
+        min-width: 82px;
+        padding: 8px 10px;
+        min-height: 36px;
+      }
+
+      .pager {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .pager button {
+        width: auto;
+        min-width: 82px;
+        min-height: 36px;
+        padding: 8px 10px;
+      }
+
+      @media (max-width: 1100px) {
+        .app-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+        }
+
+        .table-wrap {
+          max-height: none;
+        }
+
+        .topbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>Matrix Control Panel</h1>
-      <p class="muted">
-        This panel calls <code>/api/*</code>. If <code>CONTROL_API_TOKEN</code>
-        is configured, fill it below.
-      </p>
-
-      <div class="card">
-        <label for="token">Bearer Token</label>
-        <input id="token" placeholder="CONTROL_API_TOKEN" />
-        <button id="btn-check">Check API Config</button>
-        <div id="config-status" class="status"></div>
-      </div>
-
-      <div class="grid">
-        <div class="card">
-          <h3>Create Space</h3>
-          <label>Name</label>
-          <input id="space-name" placeholder="Engineering Space" />
-          <label>Topic</label>
-          <input id="space-topic" placeholder="Internal collaboration" />
-          <label>Alias Localpart (optional)</label>
-          <input id="space-alias" placeholder="engineering-space" />
-          <label>Invitees (comma-separated user IDs)</label>
-          <textarea id="space-invitees" placeholder="@user:matrix.example.com,@bot:matrix.example.com"></textarea>
-          <label>Child Room IDs (comma-separated, optional)</label>
-          <textarea id="space-children" placeholder="!roomA:matrix.example.com,!roomB:matrix.example.com"></textarea>
-          <button id="btn-space">Create Space</button>
-          <div id="space-status" class="status"></div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z" /><path d="M8 11h8" /><path d="M8 15h5" /></svg>
+          </span>
+          <span data-i18n="brand.title">Matrix 控制台</span>
         </div>
+        <p class="brand-sub" data-i18n="brand.subtitle">折叠菜单 + 面包屑，减少长页面滚动。</p>
 
-        <div class="card">
-          <h3>Create Room</h3>
-          <label>Name</label>
-          <input id="room-name" placeholder="Ops Room" />
-          <label>Topic</label>
-          <input id="room-topic" placeholder="Operations coordination" />
-          <label>Visibility</label>
-          <select id="room-private">
-            <option value="true">Private</option>
-            <option value="false">Public</option>
-          </select>
-          <label>Alias Localpart (optional)</label>
-          <input id="room-alias" placeholder="ops-room" />
-          <label>Invitees (comma-separated user IDs)</label>
-          <textarea id="room-invitees" placeholder="@user:matrix.example.com"></textarea>
-          <label>Parent Space Room ID (optional)</label>
-          <input id="room-space-id" placeholder="!spaceId:matrix.example.com" />
-          <button id="btn-room">Create Room</button>
-          <div id="room-status" class="status"></div>
-        </div>
+        <nav class="menu" aria-label="Main menu">
+          <details class="menu-group" data-group="overview" open>
+            <summary>
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 19h16" /><path d="M7 15V9" /><path d="M12 15V5" /><path d="M17 15v-3" /></svg>
+              </span>
+              <span data-i18n="group.overview">概览与资源</span>
+            </summary>
+            <div class="menu-items">
+              <button class="active" data-view-target="dashboard">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4z" /><path d="M13 4h7v4h-7z" /><path d="M13 10h7v10h-7z" /><path d="M4 13h7v7H4z" /></svg></span>
+                <span data-i18n="menu.dashboard">仪表盘</span>
+              </button>
+              <button data-view-target="inventory">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18" /><path d="M6 11h12" /><path d="M9 15h6" /></svg></span>
+                <span data-i18n="menu.resources">资源</span>
+              </button>
+              <button data-view-target="full-users">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" /><path d="M16 12a2.5 2.5 0 1 0 0-5" /><path d="M4 19a4 4 0 0 1 8 0" /><path d="M14 19a3 3 0 0 1 6 0" /></svg></span>
+                <span data-i18n="menu.full_users">全量用户</span>
+              </button>
+            </div>
+          </details>
 
-        <div class="card">
-          <h3>Create Bot User</h3>
-          <div class="muted">Default security mode disables API bot creation. Use host script unless BOT_CREATE_MODE=legacy_register.</div>
-          <label>Username (without @ and domain)</label>
-          <input id="bot-username" placeholder="opsbot" />
-          <label>Password</label>
-          <input id="bot-password" type="password" placeholder="Strong password" />
-          <label>Display Name (optional)</label>
-          <input id="bot-display-name" placeholder="Ops Bot" />
-          <button id="btn-bot">Create Bot User</button>
-          <div id="bot-status" class="status"></div>
-        </div>
+          <details class="menu-group" data-group="operations" open>
+            <summary>
+              <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18" /><path d="M3 12h18" /></svg></span>
+              <span data-i18n="group.operations">创建与运维</span>
+            </summary>
+            <div class="menu-items">
+              <button data-view-target="create-space">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4z" /><path d="M4 12l8 4 8-4" /><path d="M4 16l8 4 8-4" /></svg></span>
+                <span data-i18n="menu.create_space">创建空间</span>
+              </button>
+              <button data-view-target="users-manage">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" /><path d="M16 12a2.5 2.5 0 1 0 0-5" /><path d="M4 19a4 4 0 0 1 8 0" /><path d="M14 19a3 3 0 0 1 6 0" /></svg></span>
+                <span data-i18n="menu.users_manage">用户管理</span>
+              </button>
+              <button data-view-target="create-room">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z" /><path d="M9 10h6" /></svg></span>
+                <span data-i18n="menu.create_room">创建房间</span>
+              </button>
+              <button data-view-target="bot-ops">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4h6" /><path d="M12 4v3" /><rect x="6" y="7" width="12" height="11" rx="2" /><path d="M10 12h.01" /><path d="M14 12h.01" /><path d="M9 16h6" /></svg></span>
+                <span data-i18n="menu.bot_ops">机器人运维</span>
+              </button>
+            </div>
+          </details>
+        </nav>
+      </aside>
 
-        <div class="card">
-          <h3>Invite Bot to Room</h3>
-          <label>Bot User ID</label>
-          <input id="invite-user-id" placeholder="@opsbot:matrix.example.com" />
-          <label>Room ID</label>
-          <input id="invite-room-id" placeholder="!roomId:matrix.example.com" />
-          <button id="btn-invite">Invite Bot</button>
-          <div id="invite-status" class="status"></div>
-        </div>
-      </div>
+      <main class="main">
+        <header class="topbar">
+          <div class="breadcrumb" id="breadcrumb"></div>
+          <div class="topbar-actions">
+            <button id="btn-top-refresh" class="ghost compact" data-i18n="toolbar.refresh">刷新数据</button>
+            <div id="connection-pill" class="connection-pill">
+              <span class="dot"></span>
+              <span id="connection-text" data-i18n="connection.unknown">未连接</span>
+            </div>
+            <label for="lang-switch" data-i18n="auth.lang_label">语言</label>
+            <select id="lang-switch">
+              <option value="zh" data-i18n="auth.lang.zh">中文</option>
+              <option value="en" data-i18n="auth.lang.en">English</option>
+            </select>
+            <button id="btn-open-settings" class="secondary compact" data-i18n="toolbar.settings">API 设置</button>
+          </div>
+        </header>
+
+        <section id="settings-panel" class="settings-drawer" hidden>
+          <h3 data-i18n="auth.title">鉴权</h3>
+          <p class="hint" data-i18n="auth.hint">所有 API 调用都需要 CONTROL_API_TOKEN。</p>
+          <label for="token" data-i18n="auth.token_label">Bearer Token</label>
+          <input id="token" type="password" data-i18n-placeholder="ph.token" placeholder="粘贴 CONTROL_API_TOKEN" />
+          <div class="row" style="margin-top: 10px">
+            <button id="btn-check" data-i18n="auth.check">检查 API 配置</button>
+            <button id="btn-refresh" class="secondary" data-i18n="auth.refresh">刷新数据</button>
+            <button id="btn-close-settings" class="ghost" data-i18n="common.close">关闭</button>
+          </div>
+          <div id="config-status" class="status" data-i18n="auth.status.not_checked">尚未检查。</div>
+        </section>
+
+        <section class="hero">
+          <h1 data-i18n="hero.title">安全优先 Matrix 管理台</h1>
+          <p data-i18n="hero.subtitle">支持折叠菜单、图标导航、面包屑与中英文切换（默认中文）。</p>
+        </section>
+
+        <section class="view active" data-view="dashboard">
+          <div class="stats">
+            <article class="stat">
+              <div class="label" data-i18n="stats.spaces">空间</div>
+              <div class="value" id="stat-spaces">0</div>
+            </article>
+            <article class="stat">
+              <div class="label" data-i18n="stats.rooms">房间</div>
+              <div class="value" id="stat-rooms">0</div>
+            </article>
+            <article class="stat">
+              <div class="label" data-i18n="stats.bots">已知机器人</div>
+              <div class="value" id="stat-bots">0</div>
+            </article>
+            <article class="stat">
+              <div class="label" data-i18n="stats.users">普通用户</div>
+              <div class="value" id="stat-users">0</div>
+            </article>
+            <article class="stat">
+              <div class="label" data-i18n="stats.full_users">全量本地用户</div>
+              <div class="value" id="stat-full-users">0</div>
+            </article>
+            <article class="stat">
+              <div class="label" data-i18n="stats.full_bots">全量本地机器人</div>
+              <div class="value" id="stat-full-bots">0</div>
+            </article>
+          </div>
+
+          <article class="panel">
+            <h3 data-i18n="dashboard.tips_title">使用建议</h3>
+            <p class="hint" data-i18n="dashboard.tips_hint">左侧菜单用于切换模块。资源列表已合并到单页标签里，操作更高效。</p>
+            <div class="row">
+              <button class="secondary" data-view-target="inventory" data-i18n="dashboard.goto_resources">前往资源页面</button>
+              <button class="ghost" data-view-target="full-users" data-i18n="dashboard.goto_full_users">查看全量用户</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" data-view="inventory">
+          <article class="panel">
+            <h3 data-i18n="inventory.title">资源管理</h3>
+            <p class="hint" data-i18n="inventory.hint">在同一页面切换空间、房间、机器人，减少页面跳转。</p>
+
+            <div class="resource-tabs" role="tablist" aria-label="Resource tabs">
+              <button class="active" data-resource-target="spaces" type="button" data-i18n="inventory.tab.spaces">空间</button>
+              <button data-resource-target="rooms" type="button" data-i18n="inventory.tab.rooms">房间</button>
+              <button data-resource-target="bots" type="button" data-i18n="inventory.tab.bots">机器人</button>
+            </div>
+
+            <div class="resource-pane active" data-resource="spaces">
+              <div class="table-toolbar">
+                <input id="spaces-search" data-i18n-placeholder="ph.spaces_search" placeholder="按空间名或 room id 搜索" />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="spaces.col.name">名称</th>
+                      <th data-i18n="spaces.col.room_id">房间 ID</th>
+                      <th data-i18n="spaces.col.children">子房间数</th>
+                      <th data-i18n="spaces.col.actions">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="spaces-body"></tbody>
+                </table>
+              </div>
+              <div class="pager">
+                <button id="spaces-prev" class="ghost" data-i18n="common.prev">上一页</button>
+                <span id="spaces-page-info">Page 1/1</span>
+                <button id="spaces-next" class="ghost" data-i18n="common.next">下一页</button>
+              </div>
+            </div>
+
+            <div class="resource-pane" data-resource="rooms">
+              <div class="table-toolbar">
+                <input id="rooms-search" data-i18n-placeholder="ph.rooms_search" placeholder="按名称、话题或 room id 搜索" />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="rooms.col.name">名称</th>
+                      <th data-i18n="rooms.col.room_id">房间 ID</th>
+                      <th data-i18n="rooms.col.members">成员数</th>
+                      <th data-i18n="rooms.col.actions">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rooms-body"></tbody>
+                </table>
+              </div>
+              <div class="pager">
+                <button id="rooms-prev" class="ghost" data-i18n="common.prev">上一页</button>
+                <span id="rooms-page-info">Page 1/1</span>
+                <button id="rooms-next" class="ghost" data-i18n="common.next">下一页</button>
+              </div>
+            </div>
+
+            <div class="resource-pane" data-resource="bots">
+              <div class="table-toolbar">
+                <input id="bots-search" data-i18n-placeholder="ph.bots_search" placeholder="按 user id、显示名或状态搜索" />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="bots.col.user_id">用户 ID</th>
+                      <th data-i18n="bots.col.display_name">显示名</th>
+                      <th data-i18n="bots.col.status">状态</th>
+                      <th data-i18n="bots.col.sources">来源</th>
+                      <th data-i18n="bots.col.actions">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bots-body"></tbody>
+                </table>
+              </div>
+              <div class="pager">
+                <button id="bots-prev" class="ghost" data-i18n="common.prev">上一页</button>
+                <span id="bots-page-info">Page 1/1</span>
+                <button id="bots-next" class="ghost" data-i18n="common.next">下一页</button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" data-view="full-users">
+          <article class="panel">
+            <h3 data-i18n="full_users.title">全量用户快照</h3>
+            <p class="hint" data-i18n="full_users.hint">基于 users list-users 生成的本地用户全量快照。可在主机执行 ./scripts/refresh_full_users_snapshot.sh 更新。</p>
+            <div class="table-toolbar">
+              <input id="full-users-search" data-i18n-placeholder="ph.full_users_search" placeholder="搜索本地用户" />
+              <select id="full-users-page-size" style="max-width: 160px">
+                <option value="20">20 / page</option>
+                <option value="50">50 / page</option>
+                <option value="100">100 / page</option>
+              </select>
+              <button id="btn-full-users-load" class="secondary" style="max-width: 160px" data-i18n="full_users.load">加载快照</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-i18n="full_users.col.user_id">用户 ID</th>
+                    <th data-i18n="full_users.col.username">用户名</th>
+                    <th data-i18n="full_users.col.is_bot">是否机器人</th>
+                  </tr>
+                </thead>
+                <tbody id="full-users-body"></tbody>
+              </table>
+            </div>
+            <div class="pager">
+              <button id="full-users-prev" class="ghost" data-i18n="common.prev">上一页</button>
+              <span id="full-users-page-info">Page 1/1</span>
+              <button id="full-users-next" class="ghost" data-i18n="common.next">下一页</button>
+            </div>
+            <div id="full-users-status" class="status" data-i18n="full_users.not_loaded">快照未加载。</div>
+          </article>
+        </section>
+
+        <section class="view" data-view="users-manage">
+          <article class="panel">
+            <h3 data-i18n="users_manage.title">普通用户管理</h3>
+            <p class="hint" data-i18n="users_manage.hint">支持管理员创建普通用户、状态标记，以及创建后邀请入房间。</p>
+            <div class="table-toolbar">
+              <input id="users-search" data-i18n-placeholder="ph.users_search" placeholder="按用户 ID、用户名或状态搜索" />
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-i18n="users_manage.col.user_id">用户 ID</th>
+                    <th data-i18n="users_manage.col.username">用户名</th>
+                    <th data-i18n="users_manage.col.status">状态</th>
+                    <th data-i18n="users_manage.col.actions">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+              </table>
+            </div>
+            <div class="pager">
+              <button id="users-prev" class="ghost" data-i18n="common.prev">上一页</button>
+              <span id="users-page-info">Page 1/1</span>
+              <button id="users-next" class="ghost" data-i18n="common.next">下一页</button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3 data-i18n="users_manage.create_title">创建普通用户（管理员）</h3>
+            <p class="hint" data-i18n="users_manage.create_hint">默认安全模式为禁用；需要时设置 USER_CREATE_MODE=legacy_register。</p>
+            <div class="row">
+              <div>
+                <label for="user-username" data-i18n="users_manage.create_username">用户名</label>
+                <input id="user-username" data-i18n-placeholder="ph.user_username" placeholder="alice" />
+              </div>
+              <div>
+                <label for="user-password" data-i18n="users_manage.create_password">密码（可留空自动生成）</label>
+                <input id="user-password" type="password" data-i18n-placeholder="ph.user_password" placeholder="Strong password" />
+              </div>
+              <div>
+                <label for="user-display-name" data-i18n="users_manage.create_display_name">显示名（可选）</label>
+                <input id="user-display-name" data-i18n-placeholder="ph.user_display_name" placeholder="Alice" />
+              </div>
+            </div>
+            <label for="user-create-rooms" data-i18n="users_manage.create_rooms_select">创建后自动邀请到房间（可多选）</label>
+            <select id="user-create-rooms" multiple size="5"></select>
+            <button id="btn-user-create" data-i18n="users_manage.create_submit">创建普通用户</button>
+            <div id="user-create-status" class="status" data-i18n="common.ready">就绪。</div>
+            <div id="user-manage-status" class="status" data-i18n="common.ready">就绪。</div>
+          </article>
+        </section>
+
+        <section class="view" data-view="create-space">
+          <article class="panel">
+            <h3 data-i18n="create_space.title">创建空间</h3>
+            <div class="row">
+              <div>
+                <label for="space-name" data-i18n="create_space.name">名称</label>
+                <input id="space-name" data-i18n-placeholder="ph.space_name" placeholder="研发空间" />
+              </div>
+              <div>
+                <label for="space-topic" data-i18n="create_space.topic">主题</label>
+                <input id="space-topic" data-i18n-placeholder="ph.space_topic" placeholder="内部协作" />
+              </div>
+            </div>
+            <label for="space-alias" data-i18n="create_space.alias">Alias localpart（可选）</label>
+            <input id="space-alias" data-i18n-placeholder="ph.space_alias" placeholder="engineering-space" />
+            <label for="space-invitees" data-i18n="create_space.invitees">邀请用户（逗号分隔）</label>
+            <textarea id="space-invitees" data-i18n-placeholder="ph.space_invitees" placeholder="@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech"></textarea>
+            <label for="space-member-select" data-i18n="create_space.member_select">从目录选择邀请成员（可多选）</label>
+            <select id="space-member-select" multiple size="6"></select>
+            <label for="space-children" data-i18n="create_space.children">子房间 ID（逗号分隔）</label>
+            <textarea id="space-children" data-i18n-placeholder="ph.space_children" placeholder="!roomA:matrix.biglone.tech,!roomB:matrix.biglone.tech"></textarea>
+            <label for="space-child-select" data-i18n="create_space.child_select">从目录选择子房间（可多选）</label>
+            <select id="space-child-select" multiple size="6"></select>
+            <button id="btn-space-create" data-i18n="create_space.submit">创建空间</button>
+            <div id="space-status" class="status" data-i18n="common.ready">就绪。</div>
+          </article>
+        </section>
+
+        <section class="view" data-view="create-room">
+          <article class="panel">
+            <h3 data-i18n="create_room.title">创建房间</h3>
+            <div class="row">
+              <div>
+                <label for="room-name" data-i18n="create_room.name">名称</label>
+                <input id="room-name" data-i18n-placeholder="ph.room_name" placeholder="后端开发群" />
+              </div>
+              <div>
+                <label for="room-topic" data-i18n="create_room.topic">主题</label>
+                <input id="room-topic" data-i18n-placeholder="ph.room_topic" placeholder="后端功能讨论" />
+              </div>
+              <div>
+                <label for="room-private" data-i18n="create_room.visibility">可见性</label>
+                <select id="room-private">
+                  <option value="true" data-i18n="create_room.private">私有</option>
+                  <option value="false" data-i18n="create_room.public">公开</option>
+                </select>
+              </div>
+            </div>
+            <label for="room-alias" data-i18n="create_room.alias">Alias localpart（可选）</label>
+            <input id="room-alias" data-i18n-placeholder="ph.room_alias" placeholder="dev-backend" />
+            <label for="room-invitees" data-i18n="create_room.invitees">邀请用户（逗号分隔）</label>
+            <textarea id="room-invitees" data-i18n-placeholder="ph.room_invitees" placeholder="@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech"></textarea>
+            <label for="room-member-select" data-i18n="create_room.member_select">从目录选择邀请成员（可多选）</label>
+            <select id="room-member-select" multiple size="6"></select>
+            <label for="room-space-id" data-i18n="create_room.parent_space">父空间 Room ID（可选）</label>
+            <input id="room-space-id" data-i18n-placeholder="ph.room_space_id" placeholder="!spaceId:matrix.biglone.tech" />
+            <label for="room-space-select" data-i18n="create_room.parent_space_select">从目录选择父空间（可选）</label>
+            <select id="room-space-select"></select>
+            <button id="btn-room-create" data-i18n="create_room.submit">创建房间</button>
+            <div id="room-status" class="status" data-i18n="common.ready">就绪。</div>
+          </article>
+        </section>
+
+        <section class="view" data-view="bot-ops">
+          <article class="panel">
+            <h3 data-i18n="bot_ops.title">机器人运维</h3>
+            <p class="hint" data-i18n="bot_ops.hint">安全模式下 API 创建机器人默认禁用，建议使用主机脚本创建账号。</p>
+            <div class="row">
+              <div>
+                <label for="bot-username" data-i18n="bot_ops.create_username">创建机器人（仅 legacy 模式）</label>
+                <input id="bot-username" data-i18n-placeholder="ph.bot_username" placeholder="devbot" />
+              </div>
+              <div>
+                <label for="bot-password" data-i18n="bot_ops.password">密码</label>
+                <input id="bot-password" type="password" data-i18n-placeholder="ph.bot_password" placeholder="强密码" />
+              </div>
+              <div>
+                <label for="bot-display-name" data-i18n="bot_ops.display_name">显示名</label>
+                <input id="bot-display-name" data-i18n-placeholder="ph.bot_display_name" placeholder="开发机器人" />
+              </div>
+            </div>
+            <button id="btn-bot-create" data-i18n="bot_ops.create_submit">通过 API 创建机器人</button>
+            <label for="bot-create-rooms" data-i18n="bot_ops.create_rooms_select">创建后自动邀请到房间（可多选）</label>
+            <select id="bot-create-rooms" multiple size="5"></select>
+            <div id="bot-status" class="status warn" data-i18n="bot_ops.recommend">安全建议：使用 ./scripts/create_bot_secure.sh --username devbot --display-name "Dev Bot"</div>
+
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0" />
+
+            <div class="row">
+              <div>
+                <label for="invite-user-id" data-i18n="bot_ops.invite_user_id">机器人 User ID</label>
+                <input id="invite-user-id" data-i18n-placeholder="ph.invite_user_id" placeholder="@devbot:matrix.biglone.tech" />
+                <label for="invite-bot-select" data-i18n="bot_ops.invite_user_select">或从机器人列表选择</label>
+                <select id="invite-bot-select"></select>
+              </div>
+              <div>
+                <label for="invite-room-id" data-i18n="bot_ops.invite_room_id">目标 Room ID</label>
+                <input id="invite-room-id" data-i18n-placeholder="ph.invite_room_id" placeholder="!roomId:matrix.biglone.tech" />
+                <label for="invite-room-select" data-i18n="bot_ops.invite_room_select">或从房间列表选择</label>
+                <select id="invite-room-select"></select>
+              </div>
+            </div>
+            <button id="btn-bot-invite" data-i18n="bot_ops.invite_submit">邀请机器人进房间</button>
+            <div id="invite-status" class="status" data-i18n="common.ready">就绪。</div>
+          </article>
+        </section>
+      </main>
     </div>
 
     <script>
+      const I18N = {
+        zh: {
+          "brand.title": "Matrix 控制台",
+          "brand.subtitle": "左侧仅导航菜单，操作入口放到顶部工具栏。",
+          "auth.title": "鉴权",
+          "auth.hint": "所有 API 调用都需要 CONTROL_API_TOKEN（在此设置）。",
+          "auth.token_label": "Bearer Token",
+          "auth.lang_label": "语言",
+          "auth.lang.zh": "中文",
+          "auth.lang.en": "English",
+          "auth.check": "检查 API 配置",
+          "auth.refresh": "刷新数据",
+          "auth.status.not_checked": "尚未检查。",
+          "auth.status.need_token": "请先在 API 设置中填写 Bearer Token。",
+          "toolbar.refresh": "刷新数据",
+          "toolbar.settings": "API 设置",
+          "connection.unknown": "未连接",
+          "connection.connected": "已连接",
+          "connection.auth_failed": "鉴权失败",
+          "connection.no_token": "缺少 Token",
+          "connection.network_error": "网络异常",
+          "group.overview": "概览与资源",
+          "group.operations": "创建与运维",
+          "menu.dashboard": "仪表盘",
+          "menu.resources": "资源",
+          "menu.full_users": "全量用户",
+          "menu.users_manage": "用户管理",
+          "menu.create_space": "创建空间",
+          "menu.create_room": "创建房间",
+          "menu.bot_ops": "机器人运维",
+          "hero.title": "安全优先 Matrix 管理台",
+          "hero.subtitle": "支持折叠菜单、图标导航、面包屑与中英文切换（默认中文）。",
+          "stats.spaces": "空间",
+          "stats.rooms": "房间",
+          "stats.bots": "已知机器人",
+          "stats.users": "普通用户",
+          "stats.full_users": "全量本地用户",
+          "stats.full_bots": "全量本地机器人",
+          "dashboard.tips_title": "使用建议",
+          "dashboard.tips_hint": "左侧菜单用于切换模块。资源列表已合并到单页标签里，操作更高效。",
+          "dashboard.goto_resources": "前往资源页面",
+          "dashboard.goto_full_users": "查看全量用户",
+          "inventory.title": "资源管理",
+          "inventory.hint": "在同一页面切换空间、房间、机器人，减少页面跳转。",
+          "inventory.tab.spaces": "空间",
+          "inventory.tab.rooms": "房间",
+          "inventory.tab.bots": "机器人",
+          "spaces.col.name": "名称",
+          "spaces.col.room_id": "房间 ID",
+          "spaces.col.children": "子房间数",
+          "spaces.col.actions": "操作",
+          "rooms.col.name": "名称",
+          "rooms.col.room_id": "房间 ID",
+          "rooms.col.members": "成员数",
+          "rooms.col.actions": "操作",
+          "bots.col.user_id": "用户 ID",
+          "bots.col.display_name": "显示名",
+          "bots.col.status": "状态",
+          "bots.col.sources": "来源",
+          "bots.col.actions": "操作",
+          "full_users.title": "全量用户快照",
+          "full_users.hint": "基于 users list-users 生成的本地用户全量快照。可在主机执行 ./scripts/refresh_full_users_snapshot.sh 更新。",
+          "full_users.load": "加载快照",
+          "full_users.col.user_id": "用户 ID",
+          "full_users.col.username": "用户名",
+          "full_users.col.is_bot": "是否机器人",
+          "full_users.not_loaded": "快照未加载。",
+          "users_manage.title": "普通用户管理",
+          "users_manage.hint": "支持管理员创建普通用户、状态标记，以及创建后邀请入房间。",
+          "users_manage.col.user_id": "用户 ID",
+          "users_manage.col.username": "用户名",
+          "users_manage.col.status": "状态",
+          "users_manage.col.actions": "操作",
+          "users_manage.create_title": "创建普通用户（管理员）",
+          "users_manage.create_hint": "默认安全模式为禁用；需要时设置 USER_CREATE_MODE=legacy_register。",
+          "users_manage.create_username": "用户名",
+          "users_manage.create_password": "密码（可留空自动生成）",
+          "users_manage.create_display_name": "显示名（可选）",
+          "users_manage.create_rooms_select": "创建后自动邀请到房间（可多选）",
+          "users_manage.create_submit": "创建普通用户",
+          "create_space.title": "创建空间",
+          "create_space.name": "名称",
+          "create_space.topic": "主题",
+          "create_space.alias": "Alias localpart（可选）",
+          "create_space.invitees": "邀请用户（逗号分隔）",
+          "create_space.member_select": "从目录选择邀请成员（可多选）",
+          "create_space.children": "子房间 ID（逗号分隔）",
+          "create_space.child_select": "从目录选择子房间（可多选）",
+          "create_space.submit": "创建空间",
+          "create_room.title": "创建房间",
+          "create_room.name": "名称",
+          "create_room.topic": "主题",
+          "create_room.visibility": "可见性",
+          "create_room.private": "私有",
+          "create_room.public": "公开",
+          "create_room.alias": "Alias localpart（可选）",
+          "create_room.invitees": "邀请用户（逗号分隔）",
+          "create_room.member_select": "从目录选择邀请成员（可多选）",
+          "create_room.parent_space": "父空间 Room ID（可选）",
+          "create_room.parent_space_select": "从目录选择父空间（可选）",
+          "create_room.submit": "创建房间",
+          "bot_ops.title": "机器人运维",
+          "bot_ops.hint": "安全模式下 API 创建机器人默认禁用，建议使用主机脚本创建账号。",
+          "bot_ops.create_username": "创建机器人（仅 legacy 模式）",
+          "bot_ops.password": "密码",
+          "bot_ops.display_name": "显示名",
+          "bot_ops.create_submit": "通过 API 创建机器人",
+          "bot_ops.create_rooms_select": "创建后自动邀请到房间（可多选）",
+          "bot_ops.recommend": "安全建议：使用 ./scripts/create_bot_secure.sh --username devbot --display-name 'Dev Bot'",
+          "bot_ops.invite_user_id": "机器人 User ID",
+          "bot_ops.invite_user_select": "或从机器人列表选择",
+          "bot_ops.invite_room_id": "目标 Room ID",
+          "bot_ops.invite_room_select": "或从房间列表选择",
+          "bot_ops.invite_submit": "邀请机器人进房间",
+          "common.prev": "上一页",
+          "common.next": "下一页",
+          "common.no_data": "暂无数据。",
+          "common.yes": "是",
+          "common.no": "否",
+          "common.unnamed": "（未命名）",
+          "common.dash": "-",
+          "common.ready": "就绪。",
+          "common.close": "关闭",
+          "common.select_none": "（不选择）",
+          "common.no_options": "暂无可选项",
+          "common.bot_tag": "机器人",
+          "common.user_tag": "用户",
+          "action.archive": "归档",
+          "action.remove": "移除",
+          "action.delete": "删除",
+          "action.restore": "恢复",
+          "pager.info": "第 {page}/{total} 页（{count}）",
+          "status.processing": "处理中...",
+          "status.error_prefix": "错误",
+          "snapshot.status": "快照时间：{time}\n来源：{path}",
+          "snapshot.time_unknown": "未知",
+          "snapshot.path_unknown": "-",
+          "breadcrumb.home": "控制台",
+          "ph.token": "粘贴 CONTROL_API_TOKEN",
+          "ph.spaces_search": "按空间名或 room id 搜索",
+          "ph.rooms_search": "按名称、话题或 room id 搜索",
+          "ph.bots_search": "按 user id、显示名或状态搜索",
+          "ph.full_users_search": "搜索本地用户",
+          "ph.users_search": "按用户 ID、用户名或状态搜索",
+          "ph.space_name": "研发空间",
+          "ph.space_topic": "内部协作",
+          "ph.space_alias": "engineering-space",
+          "ph.space_invitees": "@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech",
+          "ph.space_children": "!roomA:matrix.biglone.tech,!roomB:matrix.biglone.tech",
+          "ph.room_name": "后端开发群",
+          "ph.room_topic": "后端功能讨论",
+          "ph.room_alias": "dev-backend",
+          "ph.room_invitees": "@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech",
+          "ph.room_space_id": "!spaceId:matrix.biglone.tech",
+          "ph.bot_username": "devbot",
+          "ph.bot_password": "强密码",
+          "ph.bot_display_name": "开发机器人",
+          "ph.invite_user_id": "@devbot:matrix.biglone.tech",
+          "ph.invite_room_id": "!roomId:matrix.biglone.tech",
+          "ph.user_username": "alice",
+          "ph.user_password": "留空则自动生成",
+          "ph.user_display_name": "Alice"
+        },
+        en: {
+          "brand.title": "Matrix Control Panel",
+          "brand.subtitle": "Left sidebar is navigation-only. Operational controls are in the top toolbar.",
+          "auth.title": "Authentication",
+          "auth.hint": "All API calls require CONTROL_API_TOKEN (set it here).",
+          "auth.token_label": "Bearer Token",
+          "auth.lang_label": "Language",
+          "auth.lang.zh": "Chinese",
+          "auth.lang.en": "English",
+          "auth.check": "Check API Config",
+          "auth.refresh": "Refresh Data",
+          "auth.status.not_checked": "Not checked yet.",
+          "auth.status.need_token": "Please set the Bearer token in API settings first.",
+          "toolbar.refresh": "Refresh Data",
+          "toolbar.settings": "API Settings",
+          "connection.unknown": "Disconnected",
+          "connection.connected": "Connected",
+          "connection.auth_failed": "Auth failed",
+          "connection.no_token": "Token missing",
+          "connection.network_error": "Network error",
+          "group.overview": "Overview & Inventory",
+          "group.operations": "Create & Operations",
+          "menu.dashboard": "Dashboard",
+          "menu.resources": "Resources",
+          "menu.full_users": "Full Users",
+          "menu.users_manage": "User Management",
+          "menu.create_space": "Create Space",
+          "menu.create_room": "Create Room",
+          "menu.bot_ops": "Bot Operations",
+          "hero.title": "Security-First Matrix Admin",
+          "hero.subtitle": "Collapsible menu, icon navigation, breadcrumbs, and Chinese/English switch (default Chinese).",
+          "stats.spaces": "Spaces",
+          "stats.rooms": "Rooms",
+          "stats.bots": "Known Bots",
+          "stats.users": "Users",
+          "stats.full_users": "Full Local Users",
+          "stats.full_bots": "Full Local Bots",
+          "dashboard.tips_title": "Usage Tips",
+          "dashboard.tips_hint": "Use the left menu to switch modules. Resource tables are merged into one tabbed section.",
+          "dashboard.goto_resources": "Go to Resources",
+          "dashboard.goto_full_users": "Open Full Users",
+          "inventory.title": "Resource Management",
+          "inventory.hint": "Switch spaces, rooms, and bots in one page to reduce navigation overhead.",
+          "inventory.tab.spaces": "Spaces",
+          "inventory.tab.rooms": "Rooms",
+          "inventory.tab.bots": "Bots",
+          "spaces.col.name": "Name",
+          "spaces.col.room_id": "Room ID",
+          "spaces.col.children": "Children",
+          "spaces.col.actions": "Actions",
+          "rooms.col.name": "Name",
+          "rooms.col.room_id": "Room ID",
+          "rooms.col.members": "Members",
+          "rooms.col.actions": "Actions",
+          "bots.col.user_id": "User ID",
+          "bots.col.display_name": "Display Name",
+          "bots.col.status": "Status",
+          "bots.col.sources": "Sources",
+          "bots.col.actions": "Actions",
+          "full_users.title": "Full Users Snapshot",
+          "full_users.hint": "True full local users list from users list-users snapshot. Refresh on host via ./scripts/refresh_full_users_snapshot.sh.",
+          "full_users.load": "Load Snapshot",
+          "full_users.col.user_id": "User ID",
+          "full_users.col.username": "Username",
+          "full_users.col.is_bot": "Is Bot",
+          "full_users.not_loaded": "Snapshot not loaded.",
+          "users_manage.title": "User Management",
+          "users_manage.hint": "Admin can create local users, mark logical status, and auto-invite them to rooms.",
+          "users_manage.col.user_id": "User ID",
+          "users_manage.col.username": "Username",
+          "users_manage.col.status": "Status",
+          "users_manage.col.actions": "Actions",
+          "users_manage.create_title": "Create User (Admin)",
+          "users_manage.create_hint": "Secure default blocks API create; set USER_CREATE_MODE=legacy_register when needed.",
+          "users_manage.create_username": "Username",
+          "users_manage.create_password": "Password (optional, auto-generate if blank)",
+          "users_manage.create_display_name": "Display Name (optional)",
+          "users_manage.create_rooms_select": "Auto-invite to rooms after creation (multi-select)",
+          "users_manage.create_submit": "Create User",
+          "create_space.title": "Create Space",
+          "create_space.name": "Name",
+          "create_space.topic": "Topic",
+          "create_space.alias": "Alias localpart (optional)",
+          "create_space.invitees": "Invitees (comma-separated user IDs)",
+          "create_space.member_select": "Select invitees from directory (multi-select)",
+          "create_space.children": "Child Room IDs (comma-separated)",
+          "create_space.child_select": "Select child rooms from directory (multi-select)",
+          "create_space.submit": "Create Space",
+          "create_room.title": "Create Room",
+          "create_room.name": "Name",
+          "create_room.topic": "Topic",
+          "create_room.visibility": "Visibility",
+          "create_room.private": "Private",
+          "create_room.public": "Public",
+          "create_room.alias": "Alias localpart (optional)",
+          "create_room.invitees": "Invitees (comma-separated user IDs)",
+          "create_room.member_select": "Select invitees from directory (multi-select)",
+          "create_room.parent_space": "Parent Space Room ID (optional)",
+          "create_room.parent_space_select": "Select parent space from directory (optional)",
+          "create_room.submit": "Create Room",
+          "bot_ops.title": "Bot Operations",
+          "bot_ops.hint": "API bot creation is disabled in secure mode. Use host script for account creation.",
+          "bot_ops.create_username": "Create Bot (legacy mode only)",
+          "bot_ops.password": "Password",
+          "bot_ops.display_name": "Display Name",
+          "bot_ops.create_submit": "Create Bot via API",
+          "bot_ops.create_rooms_select": "Auto-invite to rooms after creation (multi-select)",
+          "bot_ops.recommend": "Secure recommendation: use ./scripts/create_bot_secure.sh --username devbot --display-name 'Dev Bot'",
+          "bot_ops.invite_user_id": "Bot User ID",
+          "bot_ops.invite_user_select": "Or select from bot list",
+          "bot_ops.invite_room_id": "Target Room ID",
+          "bot_ops.invite_room_select": "Or select from room list",
+          "bot_ops.invite_submit": "Invite Bot to Room",
+          "common.prev": "Prev",
+          "common.next": "Next",
+          "common.no_data": "No data.",
+          "common.yes": "yes",
+          "common.no": "no",
+          "common.unnamed": "(unnamed)",
+          "common.dash": "-",
+          "common.ready": "Ready.",
+          "common.close": "Close",
+          "common.select_none": "(none)",
+          "common.no_options": "No options available",
+          "common.bot_tag": "bot",
+          "common.user_tag": "user",
+          "action.archive": "Archive",
+          "action.remove": "Remove",
+          "action.delete": "Delete",
+          "action.restore": "Restore",
+          "pager.info": "Page {page}/{total} ({count})",
+          "status.processing": "Processing...",
+          "status.error_prefix": "ERROR",
+          "snapshot.status": "Snapshot: {time}\nSource: {path}",
+          "snapshot.time_unknown": "unknown",
+          "snapshot.path_unknown": "-",
+          "breadcrumb.home": "Console",
+          "ph.token": "Paste CONTROL_API_TOKEN here",
+          "ph.spaces_search": "Search spaces by name or room id",
+          "ph.rooms_search": "Search rooms by name, topic or room id",
+          "ph.bots_search": "Search bots by user id, display name or status",
+          "ph.full_users_search": "Search local users",
+          "ph.users_search": "Search by user ID, username or status",
+          "ph.space_name": "Engineering Space",
+          "ph.space_topic": "Internal collaboration",
+          "ph.space_alias": "engineering-space",
+          "ph.space_invitees": "@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech",
+          "ph.space_children": "!roomA:matrix.biglone.tech,!roomB:matrix.biglone.tech",
+          "ph.room_name": "Dev Backend Room",
+          "ph.room_topic": "Backend feature discussion",
+          "ph.room_alias": "dev-backend",
+          "ph.room_invitees": "@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech",
+          "ph.room_space_id": "!spaceId:matrix.biglone.tech",
+          "ph.bot_username": "devbot",
+          "ph.bot_password": "Strong password",
+          "ph.bot_display_name": "Dev Bot",
+          "ph.invite_user_id": "@devbot:matrix.biglone.tech",
+          "ph.invite_room_id": "!roomId:matrix.biglone.tech",
+          "ph.user_username": "alice",
+          "ph.user_password": "Leave blank for auto-generated",
+          "ph.user_display_name": "Alice"
+        }
+      };
+
       const tokenEl = document.getElementById("token");
+      const configStatusEl = document.getElementById("config-status");
+      const langSwitchEl = document.getElementById("lang-switch");
+      const breadcrumbEl = document.getElementById("breadcrumb");
+      const connectionPillEl = document.getElementById("connection-pill");
+      const connectionTextEl = document.getElementById("connection-text");
+      const settingsPanelEl = document.getElementById("settings-panel");
+      const openSettingsBtnEl = document.getElementById("btn-open-settings");
+      const closeSettingsBtnEl = document.getElementById("btn-close-settings");
+      const topRefreshBtnEl = document.getElementById("btn-top-refresh");
+      const spaceMemberSelectEl = document.getElementById("space-member-select");
+      const roomMemberSelectEl = document.getElementById("room-member-select");
+      const spaceChildSelectEl = document.getElementById("space-child-select");
+      const roomSpaceSelectEl = document.getElementById("room-space-select");
+      const inviteBotSelectEl = document.getElementById("invite-bot-select");
+      const inviteRoomSelectEl = document.getElementById("invite-room-select");
+      const botCreateRoomsSelectEl = document.getElementById("bot-create-rooms");
+      const userCreateRoomsSelectEl = document.getElementById("user-create-rooms");
+
+      let currentLang = "zh";
+
+      const state = {
+        spaces: [],
+        rooms: [],
+        bots: [],
+        users: [],
+        spacesPage: 1,
+        roomsPage: 1,
+        botsPage: 1,
+        usersPage: 1,
+        pageSize: 8,
+        fullUsers: {
+          page: 1,
+          pageSize: 20,
+          totalPages: 0,
+          total: 0,
+          generatedAt: ""
+        },
+        directory: {
+          users: []
+        },
+        ui: {
+          connectionKey: "connection.unknown",
+          connectionTone: "neutral"
+        },
+        flags: {
+          firstBootstrapDone: false
+        }
+      };
+
       tokenEl.value = localStorage.getItem("matrix_control_token") || "";
-      tokenEl.addEventListener("change", () => {
+      const persistToken = () => {
         localStorage.setItem("matrix_control_token", tokenEl.value.trim());
+      };
+      tokenEl.addEventListener("change", persistToken);
+      tokenEl.addEventListener("input", persistToken);
+      tokenEl.addEventListener("input", () => {
+        if (tokenEl.value.trim()) {
+          setConnectionState("connection.unknown", "neutral");
+        } else {
+          setConnectionState("connection.no_token", "err");
+        }
       });
 
       function parseCSV(value) {
@@ -169,100 +1377,915 @@
           .filter(Boolean);
       }
 
-      async function callApi(path, payload, statusEl) {
-        statusEl.textContent = "Processing...";
-        const headers = { "Content-Type": "application/json" };
-        const token = tokenEl.value.trim();
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
+      function uniqueList(values) {
+        return Array.from(new Set(values.filter(Boolean)));
+      }
+
+      function getSelectedValues(selectEl) {
+        return Array.from(selectEl?.selectedOptions || [])
+          .map((opt) => opt.value.trim())
+          .filter(Boolean);
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function t(key, vars = {}) {
+        const dict = I18N[currentLang] || I18N.zh;
+        const template = dict[key] || I18N.en[key] || key;
+        return template.replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? `{${name}}`));
+      }
+
+      function applyI18n(lang) {
+        currentLang = lang === "en" ? "en" : "zh";
+        localStorage.setItem("matrix_control_lang", currentLang);
+        document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
+        langSwitchEl.value = currentLang;
+
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.dataset.i18n;
+          el.textContent = t(key);
+        });
+
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          const key = el.dataset.i18nPlaceholder;
+          el.placeholder = t(key);
+        });
+
+        updateBreadcrumb();
+        renderSpaces();
+        renderRooms();
+        renderBots();
+        renderUsers();
+        updateFullUsersPageInfo();
+        refreshDirectoryOptions();
+        setConnectionState(state.ui.connectionKey, state.ui.connectionTone);
+      }
+
+      function setConnectionState(key, tone = "neutral") {
+        state.ui.connectionKey = key;
+        state.ui.connectionTone = tone;
+        connectionPillEl.classList.remove("ok", "err");
+        if (tone === "ok") {
+          connectionPillEl.classList.add("ok");
+        } else if (tone === "err") {
+          connectionPillEl.classList.add("err");
         }
-        try {
-          const response = await fetch(path, {
-            method: "POST",
-            headers,
-            body: JSON.stringify(payload),
-          });
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok) {
-            statusEl.textContent = `ERROR ${response.status}: ${JSON.stringify(data, null, 2)}`;
-            return;
+        connectionTextEl.textContent = t(key);
+      }
+
+      function openSettingsPanel() {
+        settingsPanelEl.hidden = false;
+      }
+
+      function closeSettingsPanel() {
+        settingsPanelEl.hidden = true;
+      }
+
+      function setSingleSelectOptions(selectEl, options) {
+        const current = selectEl.value;
+        selectEl.innerHTML = "";
+        const defaultOpt = document.createElement("option");
+        defaultOpt.value = "";
+        defaultOpt.textContent = t("common.select_none");
+        selectEl.append(defaultOpt);
+
+        options.forEach((item) => {
+          const opt = document.createElement("option");
+          opt.value = item.value;
+          opt.textContent = item.label;
+          selectEl.append(opt);
+        });
+
+        if (options.length === 0) {
+          const empty = document.createElement("option");
+          empty.value = "";
+          empty.textContent = t("common.no_options");
+          empty.disabled = true;
+          selectEl.append(empty);
+        } else {
+          selectEl.value = current;
+          if (selectEl.value !== current) {
+            selectEl.value = "";
           }
-          statusEl.textContent = JSON.stringify(data, null, 2);
-        } catch (err) {
-          statusEl.textContent = `REQUEST FAILED: ${err}`;
         }
       }
 
-      document.getElementById("btn-check").addEventListener("click", async () => {
-        const el = document.getElementById("config-status");
-        el.textContent = "Loading...";
+      function setMultiSelectOptions(selectEl, options) {
+        const current = new Set(getSelectedValues(selectEl));
+        selectEl.innerHTML = "";
+        options.forEach((item) => {
+          const opt = document.createElement("option");
+          opt.value = item.value;
+          opt.textContent = item.label;
+          opt.selected = current.has(item.value);
+          selectEl.append(opt);
+        });
+
+        if (options.length === 0) {
+          const empty = document.createElement("option");
+          empty.value = "";
+          empty.textContent = t("common.no_options");
+          empty.disabled = true;
+          selectEl.append(empty);
+        }
+      }
+
+      function toRoomOption(room) {
+        const name = room.name || t("common.unnamed");
+        return { value: room.room_id || "", label: `${name} · ${room.room_id || ""}` };
+      }
+
+      function toSpaceOption(space) {
+        const name = space.name || t("common.unnamed");
+        return { value: space.room_id || "", label: `${name} · ${space.room_id || ""}` };
+      }
+
+      function toBotOption(bot) {
+        const name = bot.display_name || bot.username || bot.user_id || "";
+        return { value: bot.user_id || "", label: `${name} · ${bot.user_id || ""}` };
+      }
+
+      function toUserOption(user) {
+        const name = user.username || user.user_id || "";
+        const tag = user.is_bot ? t("common.bot_tag") : t("common.user_tag");
+        return { value: user.user_id || "", label: `${name} [${tag}] · ${user.user_id || ""}` };
+      }
+
+      function refreshDirectoryOptions() {
+        const spaces = state.spaces
+          .filter((item) => item.room_id)
+          .slice()
+          .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        const rooms = state.rooms
+          .filter((item) => item.room_id)
+          .slice()
+          .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        const bots = state.bots
+          .filter((item) => item.user_id)
+          .slice()
+          .sort((a, b) => (a.user_id || "").localeCompare(b.user_id || ""));
+
+        const directoryUsers =
+          state.directory.users.length > 0
+            ? state.directory.users
+            : bots.map((bot) => ({
+                user_id: bot.user_id,
+                username: bot.username || bot.display_name || bot.user_id,
+                is_bot: true
+              }));
+
+        const memberOptions = directoryUsers
+          .filter((item) => item.user_id)
+          .sort((a, b) => (a.user_id || "").localeCompare(b.user_id || ""))
+          .map(toUserOption);
+
+        setMultiSelectOptions(spaceMemberSelectEl, memberOptions);
+        setMultiSelectOptions(roomMemberSelectEl, memberOptions);
+        setMultiSelectOptions(spaceChildSelectEl, rooms.map(toRoomOption));
+        setSingleSelectOptions(roomSpaceSelectEl, spaces.map(toSpaceOption));
+        setSingleSelectOptions(inviteBotSelectEl, bots.map(toBotOption));
+        setSingleSelectOptions(inviteRoomSelectEl, rooms.map(toRoomOption));
+        setMultiSelectOptions(botCreateRoomsSelectEl, rooms.map(toRoomOption));
+        setMultiSelectOptions(userCreateRoomsSelectEl, rooms.map(toRoomOption));
+      }
+
+      async function loadUserDirectory() {
+        await loadUsersInventory();
+      }
+
+      function setStatus(el, message, level = "ok") {
+        el.textContent = message;
+        el.className = `status ${level}`;
+      }
+
+      function getHeaders(jsonBody = false) {
         const headers = {};
         const token = tokenEl.value.trim();
+        if (jsonBody) {
+          headers["Content-Type"] = "application/json";
+        }
         if (token) {
           headers.Authorization = `Bearer ${token}`;
         }
+        return headers;
+      }
+
+      async function requestApi(path, options = {}) {
+        let response;
         try {
-          const response = await fetch("/api/config", { headers });
-          const data = await response.json().catch(() => ({}));
-          el.textContent = response.ok
-            ? JSON.stringify(data, null, 2)
-            : `ERROR ${response.status}: ${JSON.stringify(data, null, 2)}`;
+          response = await fetch(path, options);
         } catch (err) {
-          el.textContent = `REQUEST FAILED: ${err}`;
+          setConnectionState("connection.network_error", "err");
+          throw err;
+        }
+        setConnectionState("connection.connected", "ok");
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            setConnectionState("connection.auth_failed", "err");
+          }
+          throw new Error(`HTTP ${response.status} ${JSON.stringify(payload)}`);
+        }
+        return payload;
+      }
+
+      async function withStatus(el, fn) {
+        setStatus(el, t("status.processing"), "warn");
+        try {
+          const data = await fn();
+          setStatus(el, JSON.stringify(data, null, 2), "ok");
+          return data;
+        } catch (err) {
+          setStatus(el, `${t("status.error_prefix")}: ${err}`, "err");
+          return null;
+        }
+      }
+
+      function paginateList(items, page, pageSize) {
+        const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+        const safePage = Math.min(Math.max(1, page), totalPages);
+        const start = (safePage - 1) * pageSize;
+        return {
+          page: safePage,
+          totalPages,
+          items: items.slice(start, start + pageSize)
+        };
+      }
+
+      function renderSimpleTable(bodyEl, rows, renderRow, columnCount) {
+        if (!rows.length) {
+          bodyEl.innerHTML = `<tr><td colspan="${columnCount}" style="color:#475569;">${escapeHtml(t("common.no_data"))}</td></tr>`;
+          return;
+        }
+        bodyEl.innerHTML = rows.map((row) => renderRow(row)).join("");
+      }
+
+      function applySearch(items, search, fields) {
+        const needle = search.trim().toLowerCase();
+        if (!needle) {
+          return items;
+        }
+        return items.filter((item) =>
+          fields.some((field) => {
+            const value = item[field];
+            if (Array.isArray(value)) {
+              return value.join(" ").toLowerCase().includes(needle);
+            }
+            return String(value || "")
+              .toLowerCase()
+              .includes(needle);
+          })
+        );
+      }
+
+      function updateStats(payload) {
+        document.getElementById("stat-spaces").textContent = payload.stats?.spaces ?? 0;
+        document.getElementById("stat-rooms").textContent = payload.stats?.rooms ?? 0;
+        document.getElementById("stat-bots").textContent = payload.stats?.bots ?? 0;
+        document.getElementById("stat-users").textContent = payload.stats?.users ?? state.users.length ?? 0;
+        document.getElementById("stat-full-users").textContent = payload.stats?.full_users ?? 0;
+        document.getElementById("stat-full-bots").textContent = payload.stats?.full_bots ?? 0;
+      }
+
+      function pagerText(page, totalPages, count) {
+        return t("pager.info", { page, total: totalPages, count });
+      }
+
+      function renderSpaces() {
+        const filtered = applySearch(state.spaces, document.getElementById("spaces-search").value, ["name", "room_id", "topic"]);
+        const paged = paginateList(filtered, state.spacesPage, state.pageSize);
+        state.spacesPage = paged.page;
+        document.getElementById("spaces-page-info").textContent = pagerText(paged.page, paged.totalPages, filtered.length);
+        renderSimpleTable(
+          document.getElementById("spaces-body"),
+          paged.items,
+          (row) => {
+            const roomId = row.room_id || "";
+            const encoded = encodeURIComponent(roomId);
+            return `<tr>
+              <td>${escapeHtml(row.name || t("common.unnamed"))}</td>
+              <td><code>${escapeHtml(roomId)}</code></td>
+              <td>${escapeHtml(row.child_count || 0)}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="warn" onclick="archiveSpace('${encoded}')">${escapeHtml(t("action.archive"))}</button>
+                  <button class="danger" onclick="removeSpace('${encoded}')">${escapeHtml(t("action.remove"))}</button>
+                </div>
+              </td>
+            </tr>`;
+          },
+          4
+        );
+      }
+
+      function renderRooms() {
+        const filtered = applySearch(state.rooms, document.getElementById("rooms-search").value, ["name", "room_id", "topic"]);
+        const paged = paginateList(filtered, state.roomsPage, state.pageSize);
+        state.roomsPage = paged.page;
+        document.getElementById("rooms-page-info").textContent = pagerText(paged.page, paged.totalPages, filtered.length);
+        renderSimpleTable(
+          document.getElementById("rooms-body"),
+          paged.items,
+          (row) => {
+            const roomId = row.room_id || "";
+            const encoded = encodeURIComponent(roomId);
+            return `<tr>
+              <td>${escapeHtml(row.name || t("common.unnamed"))}</td>
+              <td><code>${escapeHtml(roomId)}</code></td>
+              <td>${escapeHtml(row.member_count || 0)}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="warn" onclick="archiveRoom('${encoded}')">${escapeHtml(t("action.archive"))}</button>
+                  <button class="danger" onclick="removeRoom('${encoded}')">${escapeHtml(t("action.remove"))}</button>
+                </div>
+              </td>
+            </tr>`;
+          },
+          4
+        );
+      }
+
+      function renderBots() {
+        const filtered = applySearch(state.bots, document.getElementById("bots-search").value, ["user_id", "display_name", "status", "sources"]);
+        const paged = paginateList(filtered, state.botsPage, state.pageSize);
+        state.botsPage = paged.page;
+        document.getElementById("bots-page-info").textContent = pagerText(paged.page, paged.totalPages, filtered.length);
+        renderSimpleTable(
+          document.getElementById("bots-body"),
+          paged.items,
+          (row) => {
+            const userId = row.user_id || "";
+            const encoded = encodeURIComponent(userId);
+            const sources = (row.sources || []).join(", ") || t("common.dash");
+            return `<tr>
+              <td><code>${escapeHtml(userId)}</code></td>
+              <td>${escapeHtml(row.display_name || t("common.dash"))}</td>
+              <td>${escapeHtml(row.status || "active")}</td>
+              <td>${escapeHtml(sources)}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="warn" onclick="setBotStatus('${encoded}','archived')">${escapeHtml(t("action.archive"))}</button>
+                  <button class="danger" onclick="setBotStatus('${encoded}','deleted')">${escapeHtml(t("action.delete"))}</button>
+                  <button class="ghost" onclick="setBotStatus('${encoded}','active')">${escapeHtml(t("action.restore"))}</button>
+                </div>
+              </td>
+            </tr>`;
+          },
+          5
+        );
+      }
+
+      function renderUsers() {
+        const filtered = applySearch(state.users, document.getElementById("users-search").value, ["user_id", "username", "status"]);
+        const paged = paginateList(filtered, state.usersPage, state.pageSize);
+        state.usersPage = paged.page;
+        document.getElementById("users-page-info").textContent = pagerText(paged.page, paged.totalPages, filtered.length);
+        renderSimpleTable(
+          document.getElementById("users-body"),
+          paged.items,
+          (row) => {
+            const userId = row.user_id || "";
+            const encoded = encodeURIComponent(userId);
+            return `<tr>
+              <td><code>${escapeHtml(userId)}</code></td>
+              <td>${escapeHtml(row.username || t("common.dash"))}</td>
+              <td>${escapeHtml(row.status || "active")}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="warn" onclick="setUserStatus('${encoded}','archived')">${escapeHtml(t("action.archive"))}</button>
+                  <button class="danger" onclick="setUserStatus('${encoded}','deleted')">${escapeHtml(t("action.delete"))}</button>
+                  <button class="ghost" onclick="setUserStatus('${encoded}','active')">${escapeHtml(t("action.restore"))}</button>
+                </div>
+              </td>
+            </tr>`;
+          },
+          4
+        );
+      }
+
+      async function loadUsersInventory() {
+        const payload = await requestApi("/api/users?include_bots=true&page=1&page_size=500&include_deleted=false", {
+          headers: getHeaders(false)
+        });
+        const users = Array.isArray(payload.users) ? payload.users : [];
+        state.directory.users = users;
+        state.users = users.filter((item) => !item.is_bot);
+        document.getElementById("stat-users").textContent = state.users.length;
+        renderUsers();
+        refreshDirectoryOptions();
+      }
+
+      async function loadOverview() {
+        const payload = await requestApi("/api/overview", { headers: getHeaders(false) });
+        state.spaces = payload.spaces || [];
+        state.rooms = payload.rooms || [];
+        state.bots = payload.bots || [];
+        updateStats(payload);
+        renderSpaces();
+        renderRooms();
+        renderBots();
+        refreshDirectoryOptions();
+      }
+
+      function updateFullUsersPageInfo() {
+        document.getElementById("full-users-page-info").textContent = pagerText(
+          state.fullUsers.page || 1,
+          Math.max(1, state.fullUsers.totalPages || 1),
+          state.fullUsers.total || 0
+        );
+      }
+
+      async function loadFullUsersSnapshot() {
+        const search = encodeURIComponent(document.getElementById("full-users-search").value.trim());
+        const pageSize = Number(document.getElementById("full-users-page-size").value || "20");
+        state.fullUsers.pageSize = pageSize;
+        const path = `/api/users/full?search=${search}&page=${state.fullUsers.page}&page_size=${pageSize}`;
+        const payload = await requestApi(path, { headers: getHeaders(false) });
+        state.fullUsers.totalPages = payload.total_pages || 0;
+        state.fullUsers.total = payload.count || 0;
+        state.fullUsers.page = payload.page || 1;
+        state.fullUsers.generatedAt = payload.generated_at || "";
+
+        updateFullUsersPageInfo();
+        renderSimpleTable(
+          document.getElementById("full-users-body"),
+          payload.users || [],
+          (row) =>
+            `<tr>
+              <td><code>${escapeHtml(row.user_id || "")}</code></td>
+              <td>${escapeHtml(row.username || t("common.dash"))}</td>
+              <td>${row.is_bot ? t("common.yes") : t("common.no")}</td>
+            </tr>`,
+          3
+        );
+
+        setStatus(
+          document.getElementById("full-users-status"),
+          t("snapshot.status", {
+            time: state.fullUsers.generatedAt || t("snapshot.time_unknown"),
+            path: payload.snapshot_path || t("snapshot.path_unknown")
+          }),
+          "ok"
+        );
+      }
+
+      async function postArchive(path, statusEl) {
+        return withStatus(statusEl, async () => {
+          const payload = await requestApi(path, {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({ note: "archived from control panel" })
+          });
+          await loadOverview();
+          return payload;
+        });
+      }
+
+      async function deleteResource(path, statusEl) {
+        return withStatus(statusEl, async () => {
+          const payload = await requestApi(path, { method: "DELETE", headers: getHeaders(false) });
+          await loadOverview();
+          return payload;
+        });
+      }
+
+      async function setBotStatusApi(userId, status) {
+        return withStatus(document.getElementById("bot-status"), async () => {
+          const payload = await requestApi(`/api/bots/${encodeURIComponent(userId)}/status`, {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({ status })
+          });
+          await loadOverview();
+          await loadUserDirectory();
+          return payload;
+        });
+      }
+
+      async function setUserStatusApi(userId, status) {
+        return withStatus(document.getElementById("user-manage-status"), async () => {
+          const payload = await requestApi(`/api/users/${encodeURIComponent(userId)}/status`, {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({ status })
+          });
+          await loadUserDirectory();
+          return payload;
+        });
+      }
+
+      function updateBreadcrumb() {
+        const view = document.querySelector(".view.active")?.dataset.view || "dashboard";
+        const resource = document.querySelector(".resource-pane.active")?.dataset.resource || "spaces";
+
+        const viewLabelMap = {
+          dashboard: t("menu.dashboard"),
+          inventory: t("menu.resources"),
+          "full-users": t("menu.full_users"),
+          "users-manage": t("menu.users_manage"),
+          "create-space": t("menu.create_space"),
+          "create-room": t("menu.create_room"),
+          "bot-ops": t("menu.bot_ops")
+        };
+
+        const resourceLabelMap = {
+          spaces: t("inventory.tab.spaces"),
+          rooms: t("inventory.tab.rooms"),
+          bots: t("inventory.tab.bots")
+        };
+
+        const parts = [t("breadcrumb.home"), viewLabelMap[view] || view];
+        if (view === "inventory") {
+          parts.push(resourceLabelMap[resource] || resource);
+        }
+
+        breadcrumbEl.innerHTML = parts
+          .map((part, idx) => {
+            const safe = `<span class="${idx === parts.length - 1 ? "crumb-current" : "crumb"}">${escapeHtml(part)}</span>`;
+            if (idx === parts.length - 1) {
+              return safe;
+            }
+            return `${safe}<span class="crumb-sep">/</span>`;
+          })
+          .join("");
+      }
+
+      function setActiveView(view) {
+        const validViews = new Set(Array.from(document.querySelectorAll(".view")).map((el) => el.dataset.view));
+        const nextView = validViews.has(view) ? view : "dashboard";
+        document.querySelectorAll(".view").forEach((el) => {
+          el.classList.toggle("active", el.dataset.view === nextView);
+        });
+        document.querySelectorAll(".menu-items [data-view-target]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.viewTarget === nextView);
+        });
+        localStorage.setItem("matrix_control_active_view", nextView);
+        updateBreadcrumb();
+      }
+
+      function setResourceTab(tab) {
+        const validTabs = new Set(Array.from(document.querySelectorAll(".resource-pane")).map((el) => el.dataset.resource));
+        const nextTab = validTabs.has(tab) ? tab : "spaces";
+        document.querySelectorAll(".resource-pane").forEach((el) => {
+          el.classList.toggle("active", el.dataset.resource === nextTab);
+        });
+        document.querySelectorAll("[data-resource-target]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.resourceTarget === nextTab);
+        });
+        localStorage.setItem("matrix_control_resource_tab", nextTab);
+        updateBreadcrumb();
+      }
+
+      function initGroupCollapse() {
+        const groups = document.querySelectorAll(".menu-group");
+        groups.forEach((group) => {
+          const key = `matrix_control_group_${group.dataset.group}`;
+          const saved = localStorage.getItem(key);
+          if (saved === "open") {
+            group.open = true;
+          }
+          if (saved === "closed") {
+            group.open = false;
+          }
+          group.addEventListener("toggle", () => {
+            localStorage.setItem(key, group.open ? "open" : "closed");
+          });
+        });
+      }
+
+      window.archiveSpace = (encodedRoomId) => postArchive(`/api/spaces/${encodedRoomId}/archive`, configStatusEl);
+      window.removeSpace = (encodedRoomId) => deleteResource(`/api/spaces/${encodedRoomId}`, configStatusEl);
+      window.archiveRoom = (encodedRoomId) => postArchive(`/api/rooms/${encodedRoomId}/archive`, configStatusEl);
+      window.removeRoom = (encodedRoomId) => deleteResource(`/api/rooms/${encodedRoomId}`, configStatusEl);
+      window.setBotStatus = (encodedUserId, status) => setBotStatusApi(decodeURIComponent(encodedUserId), status);
+      window.setUserStatus = (encodedUserId, status) => setUserStatusApi(decodeURIComponent(encodedUserId), status);
+
+      async function checkApiConfig() {
+        return withStatus(configStatusEl, () => requestApi("/api/config", { headers: getHeaders(false) }));
+      }
+
+      async function refreshAllData() {
+        return withStatus(configStatusEl, async () => {
+          const cfg = await requestApi("/api/config", { headers: getHeaders(false) });
+          await loadOverview();
+          await loadUserDirectory();
+          return cfg;
+        });
+      }
+
+      function ensureTokenBeforeConfigAction() {
+        if (tokenEl.value.trim()) {
+          return true;
+        }
+        openSettingsPanel();
+        setConnectionState("connection.no_token", "err");
+        setStatus(configStatusEl, t("auth.status.need_token"), "warn");
+        return false;
+      }
+
+      document.querySelectorAll("[data-view-target]").forEach((btn) => {
+        btn.addEventListener("click", () => setActiveView(btn.dataset.viewTarget));
+      });
+
+      document.querySelectorAll("[data-resource-target]").forEach((btn) => {
+        btn.addEventListener("click", () => setResourceTab(btn.dataset.resourceTarget));
+      });
+
+      roomSpaceSelectEl.addEventListener("change", () => {
+        if (!document.getElementById("room-space-id").value.trim()) {
+          document.getElementById("room-space-id").value = roomSpaceSelectEl.value;
         }
       });
 
-      document.getElementById("btn-space").addEventListener("click", () => {
-        callApi(
-          "/api/spaces",
-          {
-            name: document.getElementById("space-name").value.trim(),
-            topic: document.getElementById("space-topic").value.trim() || null,
-            alias_localpart: document.getElementById("space-alias").value.trim() || null,
-            invitees: parseCSV(document.getElementById("space-invitees").value),
-            child_room_ids: parseCSV(document.getElementById("space-children").value),
-          },
-          document.getElementById("space-status")
-        );
+      inviteBotSelectEl.addEventListener("change", () => {
+        if (!document.getElementById("invite-user-id").value.trim()) {
+          document.getElementById("invite-user-id").value = inviteBotSelectEl.value;
+        }
       });
 
-      document.getElementById("btn-room").addEventListener("click", () => {
-        callApi(
-          "/api/rooms",
-          {
-            name: document.getElementById("room-name").value.trim(),
-            topic: document.getElementById("room-topic").value.trim() || null,
-            is_private: document.getElementById("room-private").value === "true",
-            alias_localpart: document.getElementById("room-alias").value.trim() || null,
-            invitees: parseCSV(document.getElementById("room-invitees").value),
-            space_room_id: document.getElementById("room-space-id").value.trim() || null,
-          },
-          document.getElementById("room-status")
-        );
+      inviteRoomSelectEl.addEventListener("change", () => {
+        if (!document.getElementById("invite-room-id").value.trim()) {
+          document.getElementById("invite-room-id").value = inviteRoomSelectEl.value;
+        }
       });
 
-      document.getElementById("btn-bot").addEventListener("click", () => {
-        callApi(
-          "/api/bots",
-          {
-            username: document.getElementById("bot-username").value.trim(),
-            password: document.getElementById("bot-password").value.trim(),
-            display_name: document.getElementById("bot-display-name").value.trim() || null,
-          },
-          document.getElementById("bot-status")
-        );
+      document.getElementById("btn-check").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        checkApiConfig();
       });
 
-      document.getElementById("btn-invite").addEventListener("click", () => {
-        callApi(
-          "/api/bots/invite",
-          {
-            bot_user_id: document.getElementById("invite-user-id").value.trim(),
-            room_id: document.getElementById("invite-room-id").value.trim(),
-          },
-          document.getElementById("invite-status")
-        );
+      document.getElementById("btn-refresh").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        refreshAllData();
       });
+
+      topRefreshBtnEl.addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        refreshAllData();
+      });
+
+      openSettingsBtnEl.addEventListener("click", () => {
+        openSettingsPanel();
+      });
+
+      closeSettingsBtnEl.addEventListener("click", () => {
+        closeSettingsPanel();
+      });
+
+      document.getElementById("spaces-search").addEventListener("input", () => {
+        state.spacesPage = 1;
+        renderSpaces();
+      });
+      document.getElementById("rooms-search").addEventListener("input", () => {
+        state.roomsPage = 1;
+        renderRooms();
+      });
+      document.getElementById("bots-search").addEventListener("input", () => {
+        state.botsPage = 1;
+        renderBots();
+      });
+      document.getElementById("users-search").addEventListener("input", () => {
+        state.usersPage = 1;
+        renderUsers();
+      });
+
+      document.getElementById("spaces-prev").addEventListener("click", () => {
+        state.spacesPage = Math.max(1, state.spacesPage - 1);
+        renderSpaces();
+      });
+      document.getElementById("spaces-next").addEventListener("click", () => {
+        state.spacesPage += 1;
+        renderSpaces();
+      });
+      document.getElementById("rooms-prev").addEventListener("click", () => {
+        state.roomsPage = Math.max(1, state.roomsPage - 1);
+        renderRooms();
+      });
+      document.getElementById("rooms-next").addEventListener("click", () => {
+        state.roomsPage += 1;
+        renderRooms();
+      });
+      document.getElementById("bots-prev").addEventListener("click", () => {
+        state.botsPage = Math.max(1, state.botsPage - 1);
+        renderBots();
+      });
+      document.getElementById("bots-next").addEventListener("click", () => {
+        state.botsPage += 1;
+        renderBots();
+      });
+      document.getElementById("users-prev").addEventListener("click", () => {
+        state.usersPage = Math.max(1, state.usersPage - 1);
+        renderUsers();
+      });
+      document.getElementById("users-next").addEventListener("click", () => {
+        state.usersPage += 1;
+        renderUsers();
+      });
+
+      document.getElementById("btn-full-users-load").addEventListener("click", async () => {
+        state.fullUsers.page = 1;
+        await withStatus(document.getElementById("full-users-status"), loadFullUsersSnapshot);
+      });
+      document.getElementById("full-users-search").addEventListener("input", async () => {
+        state.fullUsers.page = 1;
+        await withStatus(document.getElementById("full-users-status"), loadFullUsersSnapshot);
+      });
+      document.getElementById("full-users-page-size").addEventListener("change", async () => {
+        state.fullUsers.page = 1;
+        await withStatus(document.getElementById("full-users-status"), loadFullUsersSnapshot);
+      });
+      document.getElementById("full-users-prev").addEventListener("click", async () => {
+        state.fullUsers.page = Math.max(1, state.fullUsers.page - 1);
+        await withStatus(document.getElementById("full-users-status"), loadFullUsersSnapshot);
+      });
+      document.getElementById("full-users-next").addEventListener("click", async () => {
+        state.fullUsers.page += 1;
+        await withStatus(document.getElementById("full-users-status"), loadFullUsersSnapshot);
+      });
+
+      document.getElementById("btn-space-create").addEventListener("click", () =>
+        withStatus(document.getElementById("space-status"), async () => {
+          const invitees = uniqueList([
+            ...parseCSV(document.getElementById("space-invitees").value),
+            ...getSelectedValues(spaceMemberSelectEl)
+          ]);
+          const childRooms = uniqueList([
+            ...parseCSV(document.getElementById("space-children").value),
+            ...getSelectedValues(spaceChildSelectEl)
+          ]);
+          const payload = await requestApi("/api/spaces", {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({
+              name: document.getElementById("space-name").value.trim(),
+              topic: document.getElementById("space-topic").value.trim() || null,
+              alias_localpart: document.getElementById("space-alias").value.trim() || null,
+              invitees,
+              child_room_ids: childRooms
+            })
+          });
+          await loadOverview();
+          return payload;
+        })
+      );
+
+      document.getElementById("btn-room-create").addEventListener("click", () =>
+        withStatus(document.getElementById("room-status"), async () => {
+          const invitees = uniqueList([
+            ...parseCSV(document.getElementById("room-invitees").value),
+            ...getSelectedValues(roomMemberSelectEl)
+          ]);
+          const parentSpace = document.getElementById("room-space-id").value.trim() || roomSpaceSelectEl.value.trim() || null;
+          const payload = await requestApi("/api/rooms", {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({
+              name: document.getElementById("room-name").value.trim(),
+              topic: document.getElementById("room-topic").value.trim() || null,
+              is_private: document.getElementById("room-private").value === "true",
+              alias_localpart: document.getElementById("room-alias").value.trim() || null,
+              invitees,
+              space_room_id: parentSpace
+            })
+          });
+          await loadOverview();
+          return payload;
+        })
+      );
+
+      document.getElementById("btn-user-create").addEventListener("click", () =>
+        withStatus(document.getElementById("user-create-status"), async () => {
+          const createResult = await requestApi("/api/users", {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({
+              username: document.getElementById("user-username").value.trim(),
+              password: document.getElementById("user-password").value.trim() || null,
+              display_name: document.getElementById("user-display-name").value.trim() || null
+            })
+          });
+
+          const roomIds = uniqueList(getSelectedValues(userCreateRoomsSelectEl));
+          const invitedRooms = [];
+          const userId = createResult.user_id || "";
+          if (userId && roomIds.length > 0) {
+            for (const roomId of roomIds) {
+              await requestApi("/api/users/invite", {
+                method: "POST",
+                headers: getHeaders(true),
+                body: JSON.stringify({
+                  user_id: userId,
+                  room_id: roomId
+                })
+              });
+              invitedRooms.push(roomId);
+            }
+          }
+
+          await loadUserDirectory();
+          await loadOverview();
+          return { ...createResult, invited_rooms: invitedRooms };
+        })
+      );
+
+      document.getElementById("btn-bot-create").addEventListener("click", () =>
+        withStatus(document.getElementById("bot-status"), async () => {
+          const createResult = await requestApi("/api/bots", {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({
+              username: document.getElementById("bot-username").value.trim(),
+              password: document.getElementById("bot-password").value.trim(),
+              display_name: document.getElementById("bot-display-name").value.trim() || null
+            })
+          });
+
+          const roomIds = uniqueList(getSelectedValues(botCreateRoomsSelectEl));
+          const invitedRooms = [];
+          const userId = createResult.user_id || "";
+          if (userId && roomIds.length > 0) {
+            for (const roomId of roomIds) {
+              await requestApi("/api/bots/invite", {
+                method: "POST",
+                headers: getHeaders(true),
+                body: JSON.stringify({
+                  bot_user_id: userId,
+                  room_id: roomId
+                })
+              });
+              invitedRooms.push(roomId);
+            }
+          }
+
+          await loadOverview();
+          await loadUserDirectory();
+          return { ...createResult, invited_rooms: invitedRooms };
+        })
+      );
+
+      document.getElementById("btn-bot-invite").addEventListener("click", () =>
+        withStatus(document.getElementById("invite-status"), async () => {
+          const botUserId = document.getElementById("invite-user-id").value.trim() || inviteBotSelectEl.value.trim();
+          const roomId = document.getElementById("invite-room-id").value.trim() || inviteRoomSelectEl.value.trim();
+          if (!botUserId || !roomId) {
+            throw new Error("bot_user_id and room_id are required.");
+          }
+          const payload = await requestApi("/api/bots/invite", {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({
+              bot_user_id: botUserId,
+              room_id: roomId
+            })
+          });
+          await loadOverview();
+          await loadUserDirectory();
+          return payload;
+        })
+      );
+
+      langSwitchEl.addEventListener("change", () => {
+        applyI18n(langSwitchEl.value);
+      });
+
+      async function bootstrap() {
+        const savedView = localStorage.getItem("matrix_control_active_view") || "dashboard";
+        const savedTab = localStorage.getItem("matrix_control_resource_tab") || "spaces";
+        const savedLang = localStorage.getItem("matrix_control_lang") || "zh";
+
+        initGroupCollapse();
+        setActiveView(savedView);
+        setResourceTab(savedTab);
+        applyI18n(savedLang);
+
+        if (!tokenEl.value.trim()) {
+          setConnectionState("connection.no_token", "err");
+          if (!state.flags.firstBootstrapDone) {
+            openSettingsPanel();
+            state.flags.firstBootstrapDone = true;
+          }
+          return;
+        }
+
+        await refreshAllData();
+        closeSettingsPanel();
+        state.flags.firstBootstrapDone = true;
+      }
+
+      bootstrap();
     </script>
   </body>
 </html>
