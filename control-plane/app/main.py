@@ -1,4 +1,6 @@
 import os
+import secrets
+import string
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -13,13 +15,14 @@ INDEX_HTML = APP_DIR / "static" / "index.html"
 
 
 class Settings(BaseModel):
-    matrix_base_url: str = os.getenv("MATRIX_BASE_URL", "http://matrix-conduwuit:6167").rstrip("/")
-    matrix_server_name: str = os.getenv("MATRIX_SERVER_NAME", "matrix.biglone.tech")
+    matrix_base_url: str = os.getenv("MATRIX_BASE_URL", "http://matrix:6167").rstrip("/")
+    matrix_server_name: str = os.getenv("MATRIX_SERVER_NAME", "matrix.example.com")
     matrix_admin_user: str = os.getenv("MATRIX_ADMIN_USER", "")
     matrix_admin_password: str = os.getenv("MATRIX_ADMIN_PASSWORD", "")
     matrix_admin_token: str = os.getenv("MATRIX_ADMIN_TOKEN", "")
     control_api_token: str = os.getenv("CONTROL_API_TOKEN", "")
     expose_bot_access_token: bool = os.getenv("EXPOSE_BOT_ACCESS_TOKEN", "false").lower() == "true"
+    bot_create_mode: str = os.getenv("BOT_CREATE_MODE", "disabled").strip().lower()
 
 
 settings = Settings()
@@ -46,7 +49,7 @@ class SpaceCreateRequest(BaseModel):
 
 class BotCreateRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=64)
-    password: str = Field(..., min_length=8, max_length=128)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
     display_name: str | None = Field(default=None, max_length=100)
     inhibit_login: bool = False
 
@@ -157,6 +160,11 @@ def _build_room_payload(
     return payload
 
 
+def _generate_password(length: int = 24) -> str:
+    alphabet = string.ascii_letters + string.digits + "-_.!@#$%^&*()"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
 async def _link_space_child(space_room_id: str, child_room_id: str) -> None:
     encoded_space = quote(space_room_id, safe="")
     encoded_child = quote(child_room_id, safe="")
@@ -185,6 +193,7 @@ async def api_config() -> dict[str, Any]:
         "matrix_server_name": settings.matrix_server_name,
         "token_protection_enabled": bool(settings.control_api_token.strip()),
         "bot_access_token_exposed": settings.expose_bot_access_token,
+        "bot_create_mode": settings.bot_create_mode,
     }
 
 
@@ -234,9 +243,17 @@ async def create_space(request: SpaceCreateRequest) -> dict[str, Any]:
 
 @app.post("/api/bots", dependencies=[Depends(_require_control_token)])
 async def create_bot(request: BotCreateRequest) -> dict[str, Any]:
+    # Keep bot account creation disabled by default to avoid depending on open registration.
+    if settings.bot_create_mode != "legacy_register":
+        raise HTTPException(
+            status_code=403,
+            detail="Bot creation via API is disabled for security. Use scripts/create_bot_secure.sh on the host.",
+        )
+
+    password = request.password or _generate_password()
     payload: dict[str, Any] = {
         "username": request.username,
-        "password": request.password,
+        "password": password,
         "inhibit_login": request.inhibit_login,
     }
     created = await _matrix_request("POST", "/_matrix/client/v3/register", json_body=payload, token=await _get_admin_token())

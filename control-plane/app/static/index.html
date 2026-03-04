@@ -102,9 +102,9 @@
           <label>Alias Localpart (optional)</label>
           <input id="space-alias" placeholder="engineering-space" />
           <label>Invitees (comma-separated user IDs)</label>
-          <textarea id="space-invitees" placeholder="@user:matrix.biglone.tech,@bot:matrix.biglone.tech"></textarea>
+          <textarea id="space-invitees" placeholder="@user:matrix.example.com,@bot:matrix.example.com"></textarea>
           <label>Child Room IDs (comma-separated, optional)</label>
-          <textarea id="space-children" placeholder="!roomA:matrix.biglone.tech,!roomB:matrix.biglone.tech"></textarea>
+          <textarea id="space-children" placeholder="!roomA:matrix.example.com,!roomB:matrix.example.com"></textarea>
           <button id="btn-space">Create Space</button>
           <div id="space-status" class="status"></div>
         </div>
@@ -123,15 +123,16 @@
           <label>Alias Localpart (optional)</label>
           <input id="room-alias" placeholder="ops-room" />
           <label>Invitees (comma-separated user IDs)</label>
-          <textarea id="room-invitees" placeholder="@user:matrix.biglone.tech"></textarea>
+          <textarea id="room-invitees" placeholder="@user:matrix.example.com"></textarea>
           <label>Parent Space Room ID (optional)</label>
-          <input id="room-space-id" placeholder="!spaceId:matrix.biglone.tech" />
+          <input id="room-space-id" placeholder="!spaceId:matrix.example.com" />
           <button id="btn-room">Create Room</button>
           <div id="room-status" class="status"></div>
         </div>
 
         <div class="card">
           <h3>Create Bot User</h3>
+          <div class="muted">Default security mode disables API bot creation. Use host script unless BOT_CREATE_MODE=legacy_register.</div>
           <label>Username (without @ and domain)</label>
           <input id="bot-username" placeholder="opsbot" />
           <label>Password</label>
@@ -145,9 +146,9 @@
         <div class="card">
           <h3>Invite Bot to Room</h3>
           <label>Bot User ID</label>
-          <input id="invite-user-id" placeholder="@opsbot:matrix.biglone.tech" />
+          <input id="invite-user-id" placeholder="@opsbot:matrix.example.com" />
           <label>Room ID</label>
-          <input id="invite-room-id" placeholder="!roomId:matrix.biglone.tech" />
+          <input id="invite-room-id" placeholder="!roomId:matrix.example.com" />
           <button id="btn-invite">Invite Bot</button>
           <div id="invite-status" class="status"></div>
         </div>

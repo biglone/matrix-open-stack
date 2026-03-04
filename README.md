@@ -55,6 +55,18 @@ Local URLs:
    - `<MATRIX_ADMIN_DOMAIN>`
 3. Route DNS to your tunnel and run cloudflared as a service.
 
+## Secure Bot Provisioning (Recommended)
+
+By default, `BOT_CREATE_MODE=disabled`, so `POST /api/bots` is blocked.
+
+Create bot users through local secure script (no open registration required):
+
+```bash
+./scripts/create_bot_secure.sh --username opsbot --display-name "Ops Bot"
+```
+
+The script performs a short maintenance window and prints generated credentials once.
+
 ## Source Development (Optional)
 
 This repository runs Conduwuit from official release binaries downloaded by `scripts/download_conduwuit.sh`.

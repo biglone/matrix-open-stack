@@ -55,6 +55,7 @@ services:
       MATRIX_ADMIN_TOKEN: "${MATRIX_ADMIN_TOKEN:-}"
       CONTROL_API_TOKEN: "${CONTROL_API_TOKEN:-}"
       EXPOSE_BOT_ACCESS_TOKEN: "${EXPOSE_BOT_ACCESS_TOKEN:-false}"
+      BOT_CREATE_MODE: "${BOT_CREATE_MODE:-disabled}"
     healthcheck:
       test:
         [
