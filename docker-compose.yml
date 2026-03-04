@@ -43,6 +43,8 @@ services:
     restart: unless-stopped
     init: true
     user: "${PUID:-1000}:${PGID:-1000}"
+    group_add:
+      - "${DOCKER_GID:-979}"
     depends_on:
       matrix:
         condition: service_healthy
@@ -50,6 +52,7 @@ services:
       - "127.0.0.1:${MATRIX_CONTROL_PORT:-6180}:8080"
     volumes:
       - ./audit:/var/log/matrix-control
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       MATRIX_BASE_URL: "http://matrix:6167"
       MATRIX_SERVER_NAME: "${MATRIX_SERVER_NAME:-matrix.example.com}"
@@ -67,6 +70,10 @@ services:
       USER_STATE_PATH: "${USER_STATE_PATH:-/var/log/matrix-control/user-state.json}"
       INVITE_RATE_LIMIT_WINDOW_SECONDS: "${INVITE_RATE_LIMIT_WINDOW_SECONDS:-60}"
       INVITE_RATE_LIMIT_MAX: "${INVITE_RATE_LIMIT_MAX:-12}"
+      RESTART_API_MODE: "${RESTART_API_MODE:-disabled}"
+      DOCKER_SOCKET_PATH: "${DOCKER_SOCKET_PATH:-/var/run/docker.sock}"
+      COMPOSE_PROJECT_NAME: "${COMPOSE_PROJECT_NAME:-matrix-open-stack}"
+      RESTART_TIMEOUT_SECONDS: "${RESTART_TIMEOUT_SECONDS:-20}"
     healthcheck:
       test:
         [

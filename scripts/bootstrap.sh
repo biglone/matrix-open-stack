@@ -44,6 +44,17 @@ if [ ! -f "$ENV_FILE" ]; then
   echo "Created .env from .env.example"
 fi
 
+if [ -S /var/run/docker.sock ]; then
+  docker_gid="$(stat -c '%g' /var/run/docker.sock 2>/dev/null || true)"
+  if [ -n "$docker_gid" ]; then
+    if grep -q '^DOCKER_GID=' "$ENV_FILE"; then
+      sed -i "s|^DOCKER_GID=.*$|DOCKER_GID=${docker_gid}|" "$ENV_FILE"
+    else
+      echo "DOCKER_GID=${docker_gid}" >> "$ENV_FILE"
+    fi
+  fi
+fi
+
 mkdir -p "$BASE_DIR/data" "$BASE_DIR/backups" "$BASE_DIR/bin"
 
 if grep -q '^CONTROL_API_TOKEN=change-me-to-a-long-random-token$' "$ENV_FILE"; then

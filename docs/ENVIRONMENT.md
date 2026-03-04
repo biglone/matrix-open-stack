@@ -39,6 +39,11 @@
 | `USER_STATE_PATH` | `/var/log/matrix-control/user-state.json` | 普通用户逻辑状态存储路径 | 自定义状态目录时 |
 | `INVITE_RATE_LIMIT_WINDOW_SECONDS` | `60` | 邀请限流时间窗（秒） | 邀请频率策略调整时 |
 | `INVITE_RATE_LIMIT_MAX` | `12` | 时间窗内最大邀请次数 | 邀请频率策略调整时 |
+| `DOCKER_GID` | `979` | 管理页重启功能访问 `docker.sock` 的组 ID | 主机 `docker.sock` 组变化时（`stat -c '%g' /var/run/docker.sock`） |
+| `RESTART_API_MODE` | `disabled` | 管理页服务重启模式：`disabled` / `docker_socket` | 需要在管理页触发重启时设为 `docker_socket` |
+| `DOCKER_SOCKET_PATH` | `/var/run/docker.sock` | Docker Engine Socket 路径 | Docker socket 非默认路径时 |
+| `COMPOSE_PROJECT_NAME` | `matrix-open-stack` | Compose 项目名（用于定位容器名） | 目录名变化或自定义 project name 时 |
+| `RESTART_TIMEOUT_SECONDS` | `20` | 单个容器重启超时（秒） | 容器停机较慢时 |
 
 ## 推荐配置方案
 
@@ -80,6 +85,14 @@ USER_CREATE_MODE=legacy_register
 ```bash
 docker compose up -d --build
 ```
+
+### 管理页“服务重启”为什么不可用？
+
+- 默认是关闭的（`RESTART_API_MODE=disabled`）。
+- 开启方式：
+  - `RESTART_API_MODE=docker_socket`
+  - `DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)`
+  - 重建控制面容器：`docker compose up -d --force-recreate matrix-control-api`
 
 ## 安全提醒
 

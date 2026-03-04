@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -28,6 +28,13 @@ def _env_int(name: str, default: int) -> int:
         return max(1, int(raw))
     except ValueError:
         return default
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name, "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "on"}
 
 
 class Settings(BaseModel):
@@ -47,6 +54,10 @@ class Settings(BaseModel):
     user_state_path: str = os.getenv("USER_STATE_PATH", "/var/log/matrix-control/user-state.json")
     invite_rate_limit_window_seconds: int = _env_int("INVITE_RATE_LIMIT_WINDOW_SECONDS", 60)
     invite_rate_limit_max: int = _env_int("INVITE_RATE_LIMIT_MAX", 12)
+    restart_api_mode: str = os.getenv("RESTART_API_MODE", "disabled").strip().lower()
+    docker_socket_path: str = os.getenv("DOCKER_SOCKET_PATH", "/var/run/docker.sock")
+    compose_project_name: str = os.getenv("COMPOSE_PROJECT_NAME", "matrix-open-stack")
+    restart_timeout_seconds: int = _env_int("RESTART_TIMEOUT_SECONDS", 20)
 
 
 settings = Settings()
@@ -107,6 +118,11 @@ class BotStatusUpdateRequest(BaseModel):
 
 class UserStatusUpdateRequest(BaseModel):
     status: str = Field(..., pattern="^(active|archived|deleted)$")
+
+
+class OpsRestartRequest(BaseModel):
+    target: str = Field(..., pattern="^(matrix|control_api|stack)$")
+    reason: str | None = Field(default=None, max_length=200)
 
 
 def _matrix_error_message(response: httpx.Response) -> str:
@@ -245,6 +261,112 @@ def _audit_log(event: str, status: str, details: dict[str, Any]) -> None:
             f.write(payload + "\n")
     except Exception:
         print(payload)
+
+
+def _restart_api_enabled() -> bool:
+    return settings.restart_api_mode == "docker_socket"
+
+
+def _restart_target_containers(target: str) -> list[str]:
+    matrix_container = f"{settings.compose_project_name}-matrix-1"
+    control_container = f"{settings.compose_project_name}-matrix-control-api-1"
+    if target == "matrix":
+        return [matrix_container]
+    if target == "control_api":
+        return [control_container]
+    return [matrix_container, control_container]
+
+
+def _docker_api_request(method: str, path: str, *, params: dict[str, Any] | None = None) -> httpx.Response:
+    transport = httpx.HTTPTransport(uds=settings.docker_socket_path)
+    with httpx.Client(base_url="http://docker", transport=transport, timeout=10.0) as client:
+        return client.request(method, path, params=params)
+
+
+def _docker_error_message(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except Exception:
+        payload = response.text
+    if isinstance(payload, dict):
+        if isinstance(payload.get("message"), str):
+            return payload["message"]
+        return json.dumps(payload, ensure_ascii=True)
+    return str(payload)
+
+
+def _ensure_restart_runtime_ready() -> None:
+    if not _restart_api_enabled():
+        raise HTTPException(
+            status_code=403,
+            detail="Restart API is disabled. Set RESTART_API_MODE=docker_socket to enable.",
+        )
+
+    socket_path = Path(settings.docker_socket_path)
+    if not socket_path.exists():
+        raise HTTPException(
+            status_code=503,
+            detail=f"Docker socket not found: {settings.docker_socket_path}",
+        )
+
+    try:
+        response = _docker_api_request("GET", "/_ping")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Docker API is unreachable. Ensure /var/run/docker.sock is mounted and DOCKER_GID "
+                f"matches host docker group. ({exc})"
+            ),
+        ) from exc
+
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Docker API ping failed: HTTP {response.status_code} {_docker_error_message(response)}",
+        )
+
+
+def _restart_containers_via_docker(container_names: list[str], timeout_seconds: int) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for name in container_names:
+        encoded = quote(name, safe="")
+        inspect_response = _docker_api_request("GET", f"/containers/{encoded}/json")
+        if inspect_response.status_code == 404:
+            raise RuntimeError(f"Container not found: {name}")
+        if inspect_response.status_code >= 400:
+            raise RuntimeError(
+                f"Failed to inspect container {name}: "
+                f"HTTP {inspect_response.status_code} {_docker_error_message(inspect_response)}"
+            )
+
+        restart_response = _docker_api_request(
+            "POST",
+            f"/containers/{encoded}/restart",
+            params={"t": str(timeout_seconds)},
+        )
+        if restart_response.status_code >= 400:
+            raise RuntimeError(
+                f"Failed to restart container {name}: "
+                f"HTTP {restart_response.status_code} {_docker_error_message(restart_response)}"
+            )
+
+        results.append({"container": name, "status": "restarted"})
+    return results
+
+
+def _restart_containers_task(target: str, container_names: list[str], reason: str, client_ip: str) -> None:
+    details = {
+        "target": target,
+        "containers": container_names,
+        "reason": reason,
+        "client_ip": client_ip,
+    }
+    try:
+        result = _restart_containers_via_docker(container_names, settings.restart_timeout_seconds)
+        _audit_log("ops_restart", "ok", {**details, "result": result})
+    except Exception as exc:
+        _audit_log("ops_restart", "failed", {**details, "error": str(exc)})
 
 
 def _invite_principal_key(request: Request, authorization: str | None) -> tuple[str, str]:
@@ -754,6 +876,39 @@ async def api_config() -> dict[str, Any]:
         "user_state_path": settings.user_state_path,
         "invite_rate_limit_window_seconds": settings.invite_rate_limit_window_seconds,
         "invite_rate_limit_max": settings.invite_rate_limit_max,
+        "restart_api_mode": settings.restart_api_mode,
+        "compose_project_name": settings.compose_project_name,
+        "restart_targets": ["matrix", "control_api", "stack"],
+    }
+
+
+@app.post("/api/ops/restart", dependencies=[Depends(_require_control_token)])
+async def api_ops_restart(
+    request: OpsRestartRequest,
+    http_request: Request,
+    background_tasks: BackgroundTasks,
+) -> dict[str, Any]:
+    _ensure_restart_runtime_ready()
+    container_names = _restart_target_containers(request.target)
+    client_ip = http_request.headers.get("cf-connecting-ip") or (http_request.client.host if http_request.client else "unknown")
+    reason = (request.reason or "").strip()
+    _audit_log(
+        "ops_restart",
+        "scheduled",
+        {
+            "target": request.target,
+            "containers": container_names,
+            "reason": reason,
+            "client_ip": client_ip,
+        },
+    )
+    background_tasks.add_task(_restart_containers_task, request.target, container_names, reason, client_ip)
+    return {
+        "scheduled": True,
+        "target": request.target,
+        "containers": container_names,
+        "mode": settings.restart_api_mode,
+        "timeout_seconds": settings.restart_timeout_seconds,
     }
 
 

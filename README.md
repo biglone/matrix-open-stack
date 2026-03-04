@@ -49,6 +49,9 @@ Local URLs:
    - `USER_CREATE_MODE` (default `disabled`)
    - `AUDIT_LOG_PATH` (default `/var/log/matrix-control/audit.log`)
    - `INVITE_RATE_LIMIT_WINDOW_SECONDS` / `INVITE_RATE_LIMIT_MAX`
+4. Optional restart controls (for UI-triggered restart):
+   - `RESTART_API_MODE=disabled|docker_socket` (default `disabled`)
+   - `DOCKER_GID` should match host `docker.sock` group id (`stat -c '%g' /var/run/docker.sock`)
 
 Detailed field-by-field guide:
 
@@ -118,6 +121,7 @@ All endpoints below require `Authorization: Bearer <CONTROL_API_TOKEN>`.
 - `DELETE /api/rooms/{room_id}` (leave + forget from admin view)
 - `POST /api/bots/{user_id}/status` (`active|archived|deleted`, logical status in control-plane)
 - `POST /api/users/{user_id}/status` (`active|archived|deleted`, logical status in control-plane)
+- `POST /api/ops/restart` (`matrix|control_api|stack`, disabled by default)
 
 Notes on list scope:
 
@@ -160,4 +164,14 @@ git clone https://github.com/girlbossceo/conduwuit.git
 ```bash
 ./scripts/backup.sh
 ./scripts/restore.sh --backup ./backups/<file>.tar.gz
+```
+
+## Restart Helpers
+
+```bash
+./scripts/restart.sh matrix
+./scripts/restart.sh control-api
+./scripts/restart.sh stack
+./scripts/restart.sh tunnel
+./scripts/restart.sh status
 ```

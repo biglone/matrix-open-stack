@@ -622,6 +622,10 @@
                 <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4h6" /><path d="M12 4v3" /><rect x="6" y="7" width="12" height="11" rx="2" /><path d="M10 12h.01" /><path d="M14 12h.01" /><path d="M9 16h6" /></svg></span>
                 <span data-i18n="menu.bot_ops">机器人运维</span>
               </button>
+              <button data-view-target="service-ops">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /><path d="M9 4v6" /><path d="M15 10v10" /></svg></span>
+                <span data-i18n="menu.service_ops">服务重启</span>
+              </button>
             </div>
           </details>
         </nav>
@@ -959,6 +963,24 @@
           </article>
         </section>
 
+        <section class="view" data-view="service-ops">
+          <article class="panel">
+            <h3 data-i18n="service_ops.title">服务重启</h3>
+            <p class="hint" data-i18n="service_ops.hint">通过受控 API 触发容器重启。默认关闭，需要在 .env 显式启用。</p>
+            <div id="restart-capability" class="status warn" data-i18n="service_ops.capability.disabled">
+              重启 API 未启用：请设置 RESTART_API_MODE=docker_socket
+            </div>
+            <label for="restart-reason" data-i18n="service_ops.reason_label">操作备注（可选）</label>
+            <input id="restart-reason" data-i18n-placeholder="ph.restart_reason" placeholder="例如：应用新配置字段" />
+            <div class="row">
+              <button id="btn-restart-matrix" class="warn" data-i18n="service_ops.restart_matrix">重启 Matrix</button>
+              <button id="btn-restart-control" class="secondary" data-i18n="service_ops.restart_control">重启管理 API</button>
+              <button id="btn-restart-stack" class="danger" data-i18n="service_ops.restart_stack">重启全栈</button>
+            </div>
+            <div id="restart-status" class="status" data-i18n="common.ready">就绪。</div>
+          </article>
+        </section>
+
         <section class="view" data-view="bot-ops">
           <article class="panel">
             <h3 data-i18n="bot_ops.title">机器人运维</h3>
@@ -1037,6 +1059,7 @@
           "menu.create_space": "创建空间",
           "menu.create_room": "创建房间",
           "menu.bot_ops": "机器人运维",
+          "menu.service_ops": "服务重启",
           "hero.title": "安全优先 Matrix 管理台",
           "hero.subtitle": "支持折叠菜单、图标导航、面包屑与中英文切换（默认中文）。",
           "stats.spaces": "空间",
@@ -1127,6 +1150,17 @@
           "bot_ops.invite_room_id": "目标 Room ID",
           "bot_ops.invite_room_select": "或从房间列表选择",
           "bot_ops.invite_submit": "邀请机器人进房间",
+          "service_ops.title": "服务重启",
+          "service_ops.hint": "通过受控 API 触发容器重启。默认关闭，需要在 .env 显式启用。",
+          "service_ops.reason_label": "操作备注（可选）",
+          "service_ops.restart_matrix": "重启 Matrix",
+          "service_ops.restart_control": "重启管理 API",
+          "service_ops.restart_stack": "重启全栈",
+          "service_ops.capability.disabled": "重启 API 未启用：请设置 RESTART_API_MODE=docker_socket",
+          "service_ops.capability.enabled": "重启 API 已启用（项目：{project}）。",
+          "service_ops.capability.error": "重启 API 检查失败：{error}",
+          "service_ops.confirm": "确认执行“{target}”吗？",
+          "service_ops.reconnect_note": "已下发重启任务。若管理页短暂断连，请等待 3-8 秒后刷新。",
           "common.prev": "上一页",
           "common.next": "下一页",
           "common.no_data": "暂无数据。",
@@ -1175,7 +1209,8 @@
           "ph.invite_room_id": "!roomId:matrix.biglone.tech",
           "ph.user_username": "alice",
           "ph.user_password": "留空则自动生成",
-          "ph.user_display_name": "Alice"
+          "ph.user_display_name": "Alice",
+          "ph.restart_reason": "例如：应用新配置字段"
         },
         en: {
           "brand.title": "Matrix Control Panel",
@@ -1207,6 +1242,7 @@
           "menu.create_space": "Create Space",
           "menu.create_room": "Create Room",
           "menu.bot_ops": "Bot Operations",
+          "menu.service_ops": "Service Restart",
           "hero.title": "Security-First Matrix Admin",
           "hero.subtitle": "Collapsible menu, icon navigation, breadcrumbs, and Chinese/English switch (default Chinese).",
           "stats.spaces": "Spaces",
@@ -1297,6 +1333,17 @@
           "bot_ops.invite_room_id": "Target Room ID",
           "bot_ops.invite_room_select": "Or select from room list",
           "bot_ops.invite_submit": "Invite Bot to Room",
+          "service_ops.title": "Service Restart",
+          "service_ops.hint": "Trigger controlled container restarts via API. Disabled by default and must be explicitly enabled in .env.",
+          "service_ops.reason_label": "Operation note (optional)",
+          "service_ops.restart_matrix": "Restart Matrix",
+          "service_ops.restart_control": "Restart Control API",
+          "service_ops.restart_stack": "Restart Full Stack",
+          "service_ops.capability.disabled": "Restart API is disabled. Set RESTART_API_MODE=docker_socket.",
+          "service_ops.capability.enabled": "Restart API is enabled (project: {project}).",
+          "service_ops.capability.error": "Restart API check failed: {error}",
+          "service_ops.confirm": "Confirm to run \"{target}\"?",
+          "service_ops.reconnect_note": "Restart request scheduled. If the panel disconnects briefly, wait 3-8 seconds and refresh.",
           "common.prev": "Prev",
           "common.next": "Next",
           "common.no_data": "No data.",
@@ -1345,7 +1392,8 @@
           "ph.invite_room_id": "!roomId:matrix.biglone.tech",
           "ph.user_username": "alice",
           "ph.user_password": "Leave blank for auto-generated",
-          "ph.user_display_name": "Alice"
+          "ph.user_display_name": "Alice",
+          "ph.restart_reason": "Example: apply updated config fields"
         }
       };
 
@@ -1361,6 +1409,12 @@
           defaultValue: "1000",
           purpose: { zh: "容器进程运行组 ID", en: "Container runtime group ID" },
           change: { zh: "宿主机文件权限不一致时", en: "When host group ownership does not match" }
+        },
+        {
+          field: "DOCKER_GID",
+          defaultValue: "979",
+          purpose: { zh: "Docker Socket 访问组 ID（用于管理页重启能力）", en: "Docker socket group ID (for restart operations)" },
+          change: { zh: "主机 docker.sock 组 ID 不同时（可用 stat -c '%g' /var/run/docker.sock）", en: "When host docker.sock group differs (check via stat -c '%g' /var/run/docker.sock)" }
         },
         {
           field: "MATRIX_PORT",
@@ -1469,6 +1523,30 @@
           defaultValue: "12",
           purpose: { zh: "窗口内最大邀请次数", en: "Max invites allowed in one window" },
           change: { zh: "调整邀请节流策略时", en: "When tuning invite throttling policy" }
+        },
+        {
+          field: "RESTART_API_MODE",
+          defaultValue: "disabled",
+          purpose: { zh: "管理页重启 API 模式（disabled / docker_socket）", en: "Restart API mode for admin panel (disabled / docker_socket)" },
+          change: { zh: "需要在管理页触发服务重启时设为 docker_socket", en: "Set to docker_socket when restart from UI is required" }
+        },
+        {
+          field: "DOCKER_SOCKET_PATH",
+          defaultValue: "/var/run/docker.sock",
+          purpose: { zh: "Docker Engine Unix Socket 路径", en: "Docker Engine Unix socket path" },
+          change: { zh: "Docker socket 路径非默认时", en: "When Docker socket path is non-default" }
+        },
+        {
+          field: "COMPOSE_PROJECT_NAME",
+          defaultValue: "matrix-open-stack",
+          purpose: { zh: "Compose 项目名（用于定位容器名）", en: "Compose project name (used to resolve container names)" },
+          change: { zh: "项目目录名变化或自定义 project name 时", en: "When directory/project name differs" }
+        },
+        {
+          field: "RESTART_TIMEOUT_SECONDS",
+          defaultValue: "20",
+          purpose: { zh: "重启容器时单个容器超时秒数", en: "Per-container restart timeout seconds" },
+          change: { zh: "容器停机较慢时", en: "When containers need more time to stop" }
         }
       ];
 
@@ -1491,6 +1569,9 @@
       const botCreateRoomsSelectEl = document.getElementById("bot-create-rooms");
       const userCreateRoomsSelectEl = document.getElementById("user-create-rooms");
       const envDocsSearchEl = document.getElementById("env-docs-search");
+      const restartReasonEl = document.getElementById("restart-reason");
+      const restartCapabilityEl = document.getElementById("restart-capability");
+      const restartStatusEl = document.getElementById("restart-status");
 
       let currentLang = "zh";
 
@@ -1517,6 +1598,10 @@
         ui: {
           connectionKey: "connection.unknown",
           connectionTone: "neutral"
+        },
+        config: {
+          restart_api_mode: "disabled",
+          compose_project_name: "matrix-open-stack"
         },
         flags: {
           firstBootstrapDone: false
@@ -1593,6 +1678,7 @@
         renderEnvDocs();
         updateFullUsersPageInfo();
         refreshDirectoryOptions();
+        renderRestartCapability();
         setConnectionState(state.ui.connectionKey, state.ui.connectionTone);
       }
 
@@ -1606,6 +1692,22 @@
           connectionPillEl.classList.add("err");
         }
         connectionTextEl.textContent = t(key);
+      }
+
+      function renderRestartCapability() {
+        if (!restartCapabilityEl) {
+          return;
+        }
+        const mode = String(state.config.restart_api_mode || "disabled");
+        if (mode === "docker_socket") {
+          setStatus(
+            restartCapabilityEl,
+            t("service_ops.capability.enabled", { project: state.config.compose_project_name || "matrix-open-stack" }),
+            "ok"
+          );
+          return;
+        }
+        setStatus(restartCapabilityEl, t("service_ops.capability.disabled"), "warn");
       }
 
       function openSettingsPanel() {
@@ -2078,6 +2180,45 @@
         });
       }
 
+      async function triggerServiceRestart(target) {
+        const targetLabelMap = {
+          matrix: t("service_ops.restart_matrix"),
+          control_api: t("service_ops.restart_control"),
+          stack: t("service_ops.restart_stack")
+        };
+        const targetLabel = targetLabelMap[target] || target;
+        const confirmed = window.confirm(t("service_ops.confirm", { target: targetLabel }));
+        if (!confirmed) {
+          return;
+        }
+
+        await withStatus(restartStatusEl, async () => {
+          const payload = await requestApi("/api/ops/restart", {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({
+              target,
+              reason: restartReasonEl.value.trim() || null
+            })
+          });
+
+          if (target === "control_api" || target === "stack") {
+            setTimeout(async () => {
+              try {
+                await refreshAllData();
+              } catch (err) {
+                setStatus(configStatusEl, `${t("status.error_prefix")}: ${err}`, "warn");
+              }
+            }, 5000);
+            return { ...payload, note: t("service_ops.reconnect_note") };
+          }
+
+          await loadOverview();
+          await loadUserDirectory();
+          return payload;
+        });
+      }
+
       function updateBreadcrumb() {
         const view = document.querySelector(".view.active")?.dataset.view || "dashboard";
         const resource = document.querySelector(".resource-pane.active")?.dataset.resource || "spaces";
@@ -2090,6 +2231,7 @@
           "users-manage": t("menu.users_manage"),
           "create-space": t("menu.create_space"),
           "create-room": t("menu.create_room"),
+          "service-ops": t("menu.service_ops"),
           "bot-ops": t("menu.bot_ops")
         };
 
@@ -2166,14 +2308,21 @@
       window.setUserStatus = (encodedUserId, status) => setUserStatusApi(decodeURIComponent(encodedUserId), status);
 
       async function checkApiConfig() {
-        return withStatus(configStatusEl, () => requestApi("/api/config", { headers: getHeaders(false) }));
+        return withStatus(configStatusEl, async () => {
+          const cfg = await requestApi("/api/config", { headers: getHeaders(false) });
+          state.config = cfg || state.config;
+          renderRestartCapability();
+          return cfg;
+        });
       }
 
       async function refreshAllData() {
         return withStatus(configStatusEl, async () => {
           const cfg = await requestApi("/api/config", { headers: getHeaders(false) });
+          state.config = cfg || state.config;
           await loadOverview();
           await loadUserDirectory();
+          renderRestartCapability();
           return cfg;
         });
       }
@@ -2233,6 +2382,27 @@
           return;
         }
         refreshAllData();
+      });
+
+      document.getElementById("btn-restart-matrix").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        triggerServiceRestart("matrix");
+      });
+
+      document.getElementById("btn-restart-control").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        triggerServiceRestart("control_api");
+      });
+
+      document.getElementById("btn-restart-stack").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        triggerServiceRestart("stack");
       });
 
       openSettingsBtnEl.addEventListener("click", () => {
