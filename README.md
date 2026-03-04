@@ -12,7 +12,7 @@ This repository is designed for **clone -> bootstrap -> docker compose up**.
 ## Clone
 
 ```bash
-git clone --recurse-submodules <YOUR_REPO_URL>
+git clone <YOUR_REPO_URL>
 cd matrix-open-stack
 ```
 
@@ -23,7 +23,6 @@ cd matrix-open-stack
 - `control-plane/`: API + web panel
 - `scripts/`: bootstrap, backup, restore, binary downloader
 - `cloudflared/`: tunnel template config
-- `matrix-core/conduwuit/`: Matrix upstream source (git submodule)
 
 ## Quick Start
 
@@ -56,15 +55,15 @@ Local URLs:
    - `<MATRIX_ADMIN_DOMAIN>`
 3. Route DNS to your tunnel and run cloudflared as a service.
 
-## Submodule Note
+## Source Development (Optional)
 
-This repo includes Matrix upstream source as a submodule:
+This repository runs Conduwuit from official release binaries downloaded by `scripts/download_conduwuit.sh`.
+
+If you want Conduwuit source code for development, clone it separately:
 
 ```bash
-git submodule update --init --recursive
+git clone https://github.com/girlbossceo/conduwuit.git
 ```
-
-It is for source inspection/custom development. Runtime defaults to the released binary downloaded by `scripts/download_conduwuit.sh`.
 
 ## Security Checklist
 
