@@ -58,8 +58,13 @@ services:
       MATRIX_ADMIN_TOKEN: "${MATRIX_ADMIN_TOKEN:-}"
       CONTROL_API_TOKEN: "${CONTROL_API_TOKEN:-}"
       EXPOSE_BOT_ACCESS_TOKEN: "${EXPOSE_BOT_ACCESS_TOKEN:-false}"
+      EXPOSE_USER_ACCESS_TOKEN: "${EXPOSE_USER_ACCESS_TOKEN:-false}"
       BOT_CREATE_MODE: "${BOT_CREATE_MODE:-disabled}"
+      USER_CREATE_MODE: "${USER_CREATE_MODE:-disabled}"
       AUDIT_LOG_PATH: "${AUDIT_LOG_PATH:-/var/log/matrix-control/audit.log}"
+      FULL_USERS_SNAPSHOT_PATH: "${FULL_USERS_SNAPSHOT_PATH:-/var/log/matrix-control/full-users-snapshot.json}"
+      BOT_STATE_PATH: "${BOT_STATE_PATH:-/var/log/matrix-control/bot-state.json}"
+      USER_STATE_PATH: "${USER_STATE_PATH:-/var/log/matrix-control/user-state.json}"
       INVITE_RATE_LIMIT_WINDOW_SECONDS: "${INVITE_RATE_LIMIT_WINDOW_SECONDS:-60}"
       INVITE_RATE_LIMIT_MAX: "${INVITE_RATE_LIMIT_MAX:-12}"
     healthcheck:

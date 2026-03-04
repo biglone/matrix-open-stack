@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Create a Matrix local user through Conduwuit admin commands without enabling open registration.
+
+Usage:
+  create_user_secure.sh --username localpart [--display-name "User Name"]
+
+Notes:
+  - This script performs a short maintenance window by stopping Matrix temporarily.
+  - The generated password is printed once; store it securely.
+USAGE
+}
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+COMPOSE_FILE="$BASE_DIR/docker-compose.yml"
+CONFIG_FILE="$BASE_DIR/conf/conduwuit.toml"
+AUDIT_DIR="$BASE_DIR/audit"
+AUDIT_FILE="$AUDIT_DIR/security-audit.log"
+ACTOR="${SUDO_USER:-${USER:-unknown}}"
+
+USERNAME=""
+DISPLAY_NAME=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --username)
+      USERNAME="$2"
+      shift 2
+      ;;
+    --display-name)
+      DISPLAY_NAME="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$USERNAME" ]; then
+  echo "--username is required" >&2
+  exit 1
+fi
+
+if ! [[ "$USERNAME" =~ ^[a-z0-9._=-]+$ ]]; then
+  echo "Invalid username. Allowed: a-z, 0-9, ., _, =, -" >&2
+  exit 1
+fi
+
+server_name="$(awk -F'=' '/^server_name/{gsub(/[" ]/, "", $2); print $2}' "$CONFIG_FILE" | head -n1)"
+if [ -z "$server_name" ]; then
+  echo "Cannot detect server_name from $CONFIG_FILE" >&2
+  exit 1
+fi
+
+mkdir -p "$AUDIT_DIR"
+chmod 700 "$AUDIT_DIR" 2>/dev/null || true
+
+audit_log() {
+  local status="$1"
+  local message="$2"
+  local safe_user_id="${user_id:-}"
+  local payload
+  payload="$(jq -cn \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg event "create_user_secure" \
+    --arg status "$status" \
+    --arg actor "$ACTOR" \
+    --arg username "$USERNAME" \
+    --arg user_id "$safe_user_id" \
+    --arg display_name "$DISPLAY_NAME" \
+    --arg message "$message" \
+    '{ts:$ts,event:$event,status:$status,actor:$actor,username:$username,user_id:$user_id,display_name:$display_name,message:$message}')"
+  if ! printf "%s\n" "$payload" >> "$AUDIT_FILE"; then
+    echo "WARN: failed to write audit log to $AUDIT_FILE" >&2
+    echo "$payload" >&2
+  fi
+}
+
+audit_log "start" "begin secure user creation"
+
+was_running=0
+if docker compose -f "$COMPOSE_FILE" ps --status running --services | grep -qx "matrix"; then
+  was_running=1
+  docker compose -f "$COMPOSE_FILE" stop matrix >/dev/null
+fi
+
+restore_stack() {
+  if [ "$was_running" -eq 1 ]; then
+    docker compose -f "$COMPOSE_FILE" start matrix >/dev/null || true
+  fi
+}
+trap restore_stack EXIT
+
+raw_output="$(timeout --signal=TERM 35s docker compose -f "$COMPOSE_FILE" run --rm --no-deps matrix --config /etc/conduwuit/conduwuit.toml --execute "users create-user $USERNAME" 2>&1 || true)"
+clean_output="$(printf "%s" "$raw_output" | sed -r 's/\x1B\[[0-9;]*[A-Za-z]//g')"
+oneline="$(printf "%s" "$clean_output" | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g')"
+
+user_id="$(printf "%s" "$oneline" | sed -n 's/.*Created user with user_id:[[:space:]]*\(@[^[:space:]]*\)[[:space:]]*and[[:space:]]*password:[[:space:]]*\([^[:space:]]*\).*/\1/p')"
+password="$(printf "%s" "$oneline" | sed -n 's/.*Created user with user_id:[[:space:]]*\(@[^[:space:]]*\)[[:space:]]*and[[:space:]]*password:[[:space:]]*\([^[:space:]]*\).*/\2/p')"
+
+if [ -z "$user_id" ] || [ -z "$password" ]; then
+  echo "Failed to create user. Raw output:" >&2
+  printf "%s\n" "$clean_output" >&2
+  audit_log "failed" "failed to parse create-user output"
+  exit 1
+fi
+
+if [ -n "$DISPLAY_NAME" ]; then
+  for _ in $(seq 1 45); do
+    if curl -fsS "http://127.0.0.1:6167/_matrix/client/versions" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+
+  token=""
+  for _ in $(seq 1 20); do
+    token="$(curl -sS "http://127.0.0.1:6167/_matrix/client/v3/login" \
+      -H "Content-Type: application/json" \
+      -d "{\"type\":\"m.login.password\",\"user\":\"$user_id\",\"password\":\"$password\"}" | jq -r '.access_token // empty')"
+    if [ -n "$token" ]; then
+      break
+    fi
+    sleep 1
+  done
+
+  if [ -n "$token" ]; then
+    encoded_user_id="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$user_id")"
+    curl -sS -X PUT "http://127.0.0.1:6167/_matrix/client/v3/profile/$encoded_user_id/displayname" \
+      -H "Authorization: Bearer $token" \
+      -H "Content-Type: application/json" \
+      -d "{\"displayname\":\"$DISPLAY_NAME\"}" >/dev/null || true
+  else
+    echo "WARN: User created, but failed to set display name automatically." >&2
+    audit_log "warn" "user created but display name setup failed"
+  fi
+fi
+
+audit_log "ok" "user created"
+
+echo "User created securely."
+echo "user_id=$user_id"
+echo "password=$password"
+echo "homeserver=https://$server_name"
