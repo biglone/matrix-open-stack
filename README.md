@@ -50,6 +50,10 @@ Local URLs:
    - `AUDIT_LOG_PATH` (default `/var/log/matrix-control/audit.log`)
    - `INVITE_RATE_LIMIT_WINDOW_SECONDS` / `INVITE_RATE_LIMIT_MAX`
 
+Detailed field-by-field guide:
+
+- `docs/ENVIRONMENT.md`
+
 ## Cloudflared (Public Access)
 
 1. Copy `cloudflared/matrix-openclaw.template.yml` to `~/.cloudflared/<your>.yml`
