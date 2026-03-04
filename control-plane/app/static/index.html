@@ -593,6 +593,10 @@
                 <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" /><path d="M16 12a2.5 2.5 0 1 0 0-5" /><path d="M4 19a4 4 0 0 1 8 0" /><path d="M14 19a3 3 0 0 1 6 0" /></svg></span>
                 <span data-i18n="menu.full_users">全量用户</span>
               </button>
+              <button data-view-target="env-docs">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z" /><path d="M15 4v4h4" /><path d="M9 12h6" /><path d="M9 16h6" /></svg></span>
+                <span data-i18n="menu.env_docs">配置说明</span>
+              </button>
             </div>
           </details>
 
@@ -817,6 +821,29 @@
           </article>
         </section>
 
+        <section class="view" data-view="env-docs">
+          <article class="panel">
+            <h3 data-i18n="env_docs.title">.env 配置字段说明</h3>
+            <p class="hint" data-i18n="env_docs.hint">这里展示管理栈使用的关键环境变量，用于快速排查和上线核对。</p>
+            <div class="table-toolbar">
+              <input id="env-docs-search" data-i18n-placeholder="ph.env_docs_search" placeholder="搜索字段名、用途或建议" />
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-i18n="env_docs.col.field">字段</th>
+                    <th data-i18n="env_docs.col.default">默认值</th>
+                    <th data-i18n="env_docs.col.purpose">用途</th>
+                    <th data-i18n="env_docs.col.change">何时修改</th>
+                  </tr>
+                </thead>
+                <tbody id="env-docs-body"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
         <section class="view" data-view="users-manage">
           <article class="panel">
             <h3 data-i18n="users_manage.title">普通用户管理</h3>
@@ -1005,6 +1032,7 @@
           "menu.dashboard": "仪表盘",
           "menu.resources": "资源",
           "menu.full_users": "全量用户",
+          "menu.env_docs": "配置说明",
           "menu.users_manage": "用户管理",
           "menu.create_space": "创建空间",
           "menu.create_room": "创建房间",
@@ -1046,6 +1074,12 @@
           "full_users.col.username": "用户名",
           "full_users.col.is_bot": "是否机器人",
           "full_users.not_loaded": "快照未加载。",
+          "env_docs.title": ".env 配置字段说明",
+          "env_docs.hint": "这里展示管理栈使用的关键环境变量，用于快速排查和上线核对。",
+          "env_docs.col.field": "字段",
+          "env_docs.col.default": "默认值",
+          "env_docs.col.purpose": "用途",
+          "env_docs.col.change": "何时修改",
           "users_manage.title": "普通用户管理",
           "users_manage.hint": "支持管理员创建普通用户、状态标记，以及创建后邀请入房间。",
           "users_manage.col.user_id": "用户 ID",
@@ -1122,6 +1156,7 @@
           "ph.rooms_search": "按名称、话题或 room id 搜索",
           "ph.bots_search": "按 user id、显示名或状态搜索",
           "ph.full_users_search": "搜索本地用户",
+          "ph.env_docs_search": "搜索字段名、用途或建议",
           "ph.users_search": "按用户 ID、用户名或状态搜索",
           "ph.space_name": "研发空间",
           "ph.space_topic": "内部协作",
@@ -1167,6 +1202,7 @@
           "menu.dashboard": "Dashboard",
           "menu.resources": "Resources",
           "menu.full_users": "Full Users",
+          "menu.env_docs": "Env Docs",
           "menu.users_manage": "User Management",
           "menu.create_space": "Create Space",
           "menu.create_room": "Create Room",
@@ -1208,6 +1244,12 @@
           "full_users.col.username": "Username",
           "full_users.col.is_bot": "Is Bot",
           "full_users.not_loaded": "Snapshot not loaded.",
+          "env_docs.title": ".env Field Guide",
+          "env_docs.hint": "Key environment variables used by this stack, for faster troubleshooting and rollout checks.",
+          "env_docs.col.field": "Field",
+          "env_docs.col.default": "Default",
+          "env_docs.col.purpose": "Purpose",
+          "env_docs.col.change": "When to Change",
           "users_manage.title": "User Management",
           "users_manage.hint": "Admin can create local users, mark logical status, and auto-invite them to rooms.",
           "users_manage.col.user_id": "User ID",
@@ -1284,6 +1326,7 @@
           "ph.rooms_search": "Search rooms by name, topic or room id",
           "ph.bots_search": "Search bots by user id, display name or status",
           "ph.full_users_search": "Search local users",
+          "ph.env_docs_search": "Search field, purpose, or recommendation",
           "ph.users_search": "Search by user ID, username or status",
           "ph.space_name": "Engineering Space",
           "ph.space_topic": "Internal collaboration",
@@ -1306,6 +1349,129 @@
         }
       };
 
+      const ENV_FIELDS = [
+        {
+          field: "PUID",
+          defaultValue: "1000",
+          purpose: { zh: "容器进程运行用户 ID", en: "Container runtime user ID" },
+          change: { zh: "宿主机文件权限不一致时", en: "When host file ownership does not match" }
+        },
+        {
+          field: "PGID",
+          defaultValue: "1000",
+          purpose: { zh: "容器进程运行组 ID", en: "Container runtime group ID" },
+          change: { zh: "宿主机文件权限不一致时", en: "When host group ownership does not match" }
+        },
+        {
+          field: "MATRIX_PORT",
+          defaultValue: "6167",
+          purpose: { zh: "Matrix 本地监听端口", en: "Local Matrix listening port" },
+          change: { zh: "端口冲突时", en: "When port conflicts happen" }
+        },
+        {
+          field: "MATRIX_CONTROL_PORT",
+          defaultValue: "6180",
+          purpose: { zh: "管理 API 本地监听端口", en: "Local control API listening port" },
+          change: { zh: "端口冲突时", en: "When port conflicts happen" }
+        },
+        {
+          field: "MATRIX_SERVER_NAME",
+          defaultValue: "matrix.example.com",
+          purpose: { zh: "Matrix 服务域名（用户 ID 后缀）", en: "Matrix server domain (user ID suffix)" },
+          change: { zh: "上线前必须设置为真实域名", en: "Must be set to real domain before production" }
+        },
+        {
+          field: "CONDUWUIT_VERSION",
+          defaultValue: "v0.4.6",
+          purpose: { zh: "Conduwuit 版本标签", en: "Conduwuit version tag" },
+          change: { zh: "升级或回滚版本时", en: "When upgrading or rolling back" }
+        },
+        {
+          field: "MATRIX_ADMIN_USER",
+          defaultValue: "admin",
+          purpose: { zh: "管理员用户名（账号密码模式）", en: "Admin username (password auth mode)" },
+          change: { zh: "管理员账号变化时", en: "When admin account changes" }
+        },
+        {
+          field: "MATRIX_ADMIN_PASSWORD",
+          defaultValue: "change-me",
+          purpose: { zh: "管理员密码（账号密码模式）", en: "Admin password (password auth mode)" },
+          change: { zh: "管理员密码更新时", en: "When admin password rotates" }
+        },
+        {
+          field: "MATRIX_ADMIN_TOKEN",
+          defaultValue: "",
+          purpose: { zh: "管理员 Access Token（有值时优先）", en: "Admin access token (takes priority if set)" },
+          change: { zh: "希望减少登录开销时", en: "When you prefer token auth over login flow" }
+        },
+        {
+          field: "CONTROL_API_TOKEN",
+          defaultValue: "change-me-to-a-long-random-token",
+          purpose: { zh: "保护 /api/* 的 Bearer Token", en: "Bearer token protecting /api/*" },
+          change: { zh: "生产环境必须改为强随机", en: "Must be randomized in production" }
+        },
+        {
+          field: "EXPOSE_BOT_ACCESS_TOKEN",
+          defaultValue: "false",
+          purpose: { zh: "是否返回机器人 access_token", en: "Whether /api/bots returns bot access_token" },
+          change: { zh: "仅在严格受控场景临时开启", en: "Enable only in tightly controlled scenarios" }
+        },
+        {
+          field: "EXPOSE_USER_ACCESS_TOKEN",
+          defaultValue: "false",
+          purpose: { zh: "是否返回普通用户 access_token", en: "Whether /api/users returns user access_token" },
+          change: { zh: "仅在严格受控场景临时开启", en: "Enable only in tightly controlled scenarios" }
+        },
+        {
+          field: "BOT_CREATE_MODE",
+          defaultValue: "disabled",
+          purpose: { zh: "机器人 API 创建开关", en: "Bot API creation mode" },
+          change: { zh: "需要 API 直接建机器人时改为 legacy_register", en: "Set to legacy_register only if API bot creation is required" }
+        },
+        {
+          field: "USER_CREATE_MODE",
+          defaultValue: "disabled",
+          purpose: { zh: "普通用户 API 创建开关", en: "User API creation mode" },
+          change: { zh: "需要 API 直接建用户时改为 legacy_register", en: "Set to legacy_register only if API user creation is required" }
+        },
+        {
+          field: "AUDIT_LOG_PATH",
+          defaultValue: "/var/log/matrix-control/audit.log",
+          purpose: { zh: "控制面审计日志路径", en: "Control-plane audit log path" },
+          change: { zh: "自定义日志目录时", en: "When using custom log storage" }
+        },
+        {
+          field: "FULL_USERS_SNAPSHOT_PATH",
+          defaultValue: "/var/log/matrix-control/full-users-snapshot.json",
+          purpose: { zh: "全量用户快照路径", en: "Full users snapshot path" },
+          change: { zh: "自定义快照目录时", en: "When using custom snapshot location" }
+        },
+        {
+          field: "BOT_STATE_PATH",
+          defaultValue: "/var/log/matrix-control/bot-state.json",
+          purpose: { zh: "机器人逻辑状态存储", en: "Logical state storage for bots" },
+          change: { zh: "自定义状态目录时", en: "When using custom state location" }
+        },
+        {
+          field: "USER_STATE_PATH",
+          defaultValue: "/var/log/matrix-control/user-state.json",
+          purpose: { zh: "普通用户逻辑状态存储", en: "Logical state storage for users" },
+          change: { zh: "自定义状态目录时", en: "When using custom state location" }
+        },
+        {
+          field: "INVITE_RATE_LIMIT_WINDOW_SECONDS",
+          defaultValue: "60",
+          purpose: { zh: "邀请限流窗口秒数", en: "Invite rate-limit window in seconds" },
+          change: { zh: "调整邀请节流策略时", en: "When tuning invite throttling policy" }
+        },
+        {
+          field: "INVITE_RATE_LIMIT_MAX",
+          defaultValue: "12",
+          purpose: { zh: "窗口内最大邀请次数", en: "Max invites allowed in one window" },
+          change: { zh: "调整邀请节流策略时", en: "When tuning invite throttling policy" }
+        }
+      ];
+
       const tokenEl = document.getElementById("token");
       const configStatusEl = document.getElementById("config-status");
       const langSwitchEl = document.getElementById("lang-switch");
@@ -1324,6 +1490,7 @@
       const inviteRoomSelectEl = document.getElementById("invite-room-select");
       const botCreateRoomsSelectEl = document.getElementById("bot-create-rooms");
       const userCreateRoomsSelectEl = document.getElementById("user-create-rooms");
+      const envDocsSearchEl = document.getElementById("env-docs-search");
 
       let currentLang = "zh";
 
@@ -1423,6 +1590,7 @@
         renderRooms();
         renderBots();
         renderUsers();
+        renderEnvDocs();
         updateFullUsersPageInfo();
         refreshDirectoryOptions();
         setConnectionState(state.ui.connectionKey, state.ui.connectionTone);
@@ -1770,6 +1938,35 @@
         );
       }
 
+      function renderEnvDocs() {
+        const needle = (envDocsSearchEl?.value || "").trim().toLowerCase();
+        const filtered = ENV_FIELDS.filter((item) => {
+          if (!needle) {
+            return true;
+          }
+          const hay = `${item.field} ${item.defaultValue} ${item.purpose[currentLang]} ${item.change[currentLang]}`.toLowerCase();
+          return hay.includes(needle);
+        });
+
+        renderSimpleTable(
+          document.getElementById("env-docs-body"),
+          filtered.map((item) => ({
+            field: item.field,
+            defaultValue: item.defaultValue || t("common.dash"),
+            purpose: item.purpose[currentLang],
+            change: item.change[currentLang],
+          })),
+          (row) =>
+            `<tr>
+              <td><code>${escapeHtml(row.field)}</code></td>
+              <td>${escapeHtml(row.defaultValue)}</td>
+              <td>${escapeHtml(row.purpose)}</td>
+              <td>${escapeHtml(row.change)}</td>
+            </tr>`,
+          4
+        );
+      }
+
       async function loadUsersInventory() {
         const payload = await requestApi("/api/users?include_bots=true&page=1&page_size=500&include_deleted=false", {
           headers: getHeaders(false)
@@ -1889,6 +2086,7 @@
           dashboard: t("menu.dashboard"),
           inventory: t("menu.resources"),
           "full-users": t("menu.full_users"),
+          "env-docs": t("menu.env_docs"),
           "users-manage": t("menu.users_manage"),
           "create-space": t("menu.create_space"),
           "create-room": t("menu.create_room"),
@@ -2060,6 +2258,9 @@
       document.getElementById("users-search").addEventListener("input", () => {
         state.usersPage = 1;
         renderUsers();
+      });
+      envDocsSearchEl.addEventListener("input", () => {
+        renderEnvDocs();
       });
 
       document.getElementById("spaces-prev").addEventListener("click", () => {

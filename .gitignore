@@ -6,6 +6,7 @@ audit/
 
 # Secrets
 .env
+.env.bak-*
 credentials.txt
 *.json
 
