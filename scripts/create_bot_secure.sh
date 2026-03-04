@@ -106,10 +106,10 @@ trap restore_stack EXIT
 # Conduwuit keeps running after --execute; use timeout to stop the one-shot container after command output is emitted.
 raw_output="$(timeout --signal=TERM 35s docker compose -f "$COMPOSE_FILE" run --rm --no-deps matrix --config /etc/conduwuit/conduwuit.toml --execute "users create-user $USERNAME" 2>&1 || true)"
 clean_output="$(printf "%s" "$raw_output" | sed -r 's/\x1B\[[0-9;]*[A-Za-z]//g')"
-oneline="$(printf "%s" "$clean_output" | tr '\n' ' ')"
+oneline="$(printf "%s" "$clean_output" | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g')"
 
-user_id="$(printf "%s" "$oneline" | sed -n 's/.*Created user with user_id:[[:space:]]*\(@[^[:space:]]*\)[[:space:]]*and password:[[:space:]]*\([^[:space:]]*\).*/\1/p')"
-password="$(printf "%s" "$oneline" | sed -n 's/.*Created user with user_id:[[:space:]]*\(@[^[:space:]]*\)[[:space:]]*and password:[[:space:]]*\([^[:space:]]*\).*/\2/p')"
+user_id="$(printf "%s" "$oneline" | sed -n 's/.*Created user with user_id:[[:space:]]*\(@[^[:space:]]*\)[[:space:]]*and[[:space:]]*password:[[:space:]]*\([^[:space:]]*\).*/\1/p')"
+password="$(printf "%s" "$oneline" | sed -n 's/.*Created user with user_id:[[:space:]]*\(@[^[:space:]]*\)[[:space:]]*and[[:space:]]*password:[[:space:]]*\([^[:space:]]*\).*/\2/p')"
 
 if [ -z "$user_id" ] || [ -z "$password" ]; then
   echo "Failed to create bot user. Raw output:" >&2
