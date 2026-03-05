@@ -614,6 +614,14 @@
                 <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z" /><path d="M9 10h6" /></svg></span>
                 <span data-i18n="menu.create_room">创建房间</span>
               </button>
+              <button data-view-target="room-config">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v4" /><path d="M12 17v4" /><path d="M4.9 4.9l2.8 2.8" /><path d="M16.3 16.3l2.8 2.8" /><path d="M3 12h4" /><path d="M17 12h4" /><path d="M4.9 19.1l2.8-2.8" /><path d="M16.3 7.7l2.8-2.8" /><circle cx="12" cy="12" r="3.5" /></svg></span>
+                <span data-i18n="menu.room_config">房间配置</span>
+              </button>
+              <button data-view-target="space-config">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4z" /><path d="M4 12l8 4 8-4" /><path d="M12 10v10" /></svg></span>
+                <span data-i18n="menu.space_config">空间配置</span>
+              </button>
               <button data-view-target="users-manage">
                 <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" /><path d="M16 12a2.5 2.5 0 1 0 0-5" /><path d="M4 19a4 4 0 0 1 8 0" /><path d="M14 19a3 3 0 0 1 6 0" /></svg></span>
                 <span data-i18n="menu.users_manage">用户管理</span>
@@ -967,6 +975,116 @@
           </article>
         </section>
 
+        <section class="view" data-view="room-config">
+          <article class="panel">
+            <h3 data-i18n="room_config.title">房间配置</h3>
+            <p class="hint" data-i18n="room_config.hint">加载并修改已有房间的名称、主题和加入规则。</p>
+            <label for="room-config-select" data-i18n="room_config.select">选择房间</label>
+            <select id="room-config-select"></select>
+            <div class="row">
+              <button id="btn-room-config-load" class="secondary" data-i18n="room_config.load">加载当前配置</button>
+            </div>
+            <div class="row">
+              <div>
+                <label for="room-config-name" data-i18n="room_config.name">名称</label>
+                <input id="room-config-name" data-i18n-placeholder="ph.room_config_name" placeholder="后端开发群" />
+              </div>
+              <div>
+                <label for="room-config-topic" data-i18n="room_config.topic">主题</label>
+                <input id="room-config-topic" data-i18n-placeholder="ph.room_config_topic" placeholder="后端功能讨论" />
+              </div>
+              <div>
+                <label for="room-config-join-rule" data-i18n="room_config.join_rule">加入规则</label>
+                <select id="room-config-join-rule">
+                  <option value="invite" data-i18n="room_config.private">私有（仅邀请）</option>
+                  <option value="public" data-i18n="room_config.public">公开（可直接加入）</option>
+                </select>
+              </div>
+            </div>
+            <button id="btn-room-config-save" data-i18n="room_config.save">保存房间配置</button>
+            <div id="room-config-status" class="status" data-i18n="common.ready">就绪。</div>
+
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0" />
+
+            <h3 data-i18n="room_config.members_title">成员配置</h3>
+            <p class="hint" data-i18n="room_config.members_hint">支持查看当前成员、邀请成员、移除成员。</p>
+            <label for="room-config-members" data-i18n="room_config.current_members">当前成员（可多选）</label>
+            <select id="room-config-members" multiple size="8"></select>
+            <p class="hint" data-i18n="common.multiselect_hint">可直接点击多项进行选择/取消，无需按 Ctrl/Command。</p>
+            <div class="row">
+              <div>
+                <label for="room-config-member-id" data-i18n="room_config.member_id">成员 User ID</label>
+                <input id="room-config-member-id" data-i18n-placeholder="ph.room_config_member_id" placeholder="@alice:matrix.biglone.tech" />
+              </div>
+              <div>
+                <label for="room-config-member-select" data-i18n="room_config.member_select">或从目录选择成员</label>
+                <select id="room-config-member-select"></select>
+              </div>
+            </div>
+            <div class="row">
+              <button id="btn-room-config-members-load" class="secondary" data-i18n="room_config.members_load">刷新成员列表</button>
+              <button id="btn-room-config-member-add" data-i18n="room_config.member_add">邀请成员</button>
+              <button id="btn-room-config-member-remove" class="warn" data-i18n="room_config.member_remove">移除已选成员</button>
+            </div>
+            <div id="room-config-member-status" class="status" data-i18n="common.ready">就绪。</div>
+          </article>
+        </section>
+
+        <section class="view" data-view="space-config">
+          <article class="panel">
+            <h3 data-i18n="space_config.title">空间配置</h3>
+            <p class="hint" data-i18n="space_config.hint">加载并修改已有空间的名称、主题和加入规则。</p>
+            <label for="space-config-select" data-i18n="space_config.select">选择空间</label>
+            <select id="space-config-select"></select>
+            <div class="row">
+              <button id="btn-space-config-load" class="secondary" data-i18n="space_config.load">加载当前配置</button>
+            </div>
+            <div class="row">
+              <div>
+                <label for="space-config-name" data-i18n="space_config.name">名称</label>
+                <input id="space-config-name" data-i18n-placeholder="ph.space_config_name" placeholder="研发空间" />
+              </div>
+              <div>
+                <label for="space-config-topic" data-i18n="space_config.topic">主题</label>
+                <input id="space-config-topic" data-i18n-placeholder="ph.space_config_topic" placeholder="内部协作" />
+              </div>
+              <div>
+                <label for="space-config-join-rule" data-i18n="space_config.join_rule">加入规则</label>
+                <select id="space-config-join-rule">
+                  <option value="invite" data-i18n="space_config.private">私有（仅邀请）</option>
+                  <option value="public" data-i18n="space_config.public">公开（可直接加入）</option>
+                </select>
+              </div>
+            </div>
+            <button id="btn-space-config-save" data-i18n="space_config.save">保存空间配置</button>
+            <div id="space-config-status" class="status" data-i18n="common.ready">就绪。</div>
+
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0" />
+
+            <h3 data-i18n="space_config.members_title">成员配置</h3>
+            <p class="hint" data-i18n="space_config.members_hint">支持查看当前成员、邀请成员、移除成员。</p>
+            <label for="space-config-members" data-i18n="space_config.current_members">当前成员（可多选）</label>
+            <select id="space-config-members" multiple size="8"></select>
+            <p class="hint" data-i18n="common.multiselect_hint">可直接点击多项进行选择/取消，无需按 Ctrl/Command。</p>
+            <div class="row">
+              <div>
+                <label for="space-config-member-id" data-i18n="space_config.member_id">成员 User ID</label>
+                <input id="space-config-member-id" data-i18n-placeholder="ph.space_config_member_id" placeholder="@alice:matrix.biglone.tech" />
+              </div>
+              <div>
+                <label for="space-config-member-select" data-i18n="space_config.member_select">或从目录选择成员</label>
+                <select id="space-config-member-select"></select>
+              </div>
+            </div>
+            <div class="row">
+              <button id="btn-space-config-members-load" class="secondary" data-i18n="space_config.members_load">刷新成员列表</button>
+              <button id="btn-space-config-member-add" data-i18n="space_config.member_add">邀请成员</button>
+              <button id="btn-space-config-member-remove" class="warn" data-i18n="space_config.member_remove">移除已选成员</button>
+            </div>
+            <div id="space-config-member-status" class="status" data-i18n="common.ready">就绪。</div>
+          </article>
+        </section>
+
         <section class="view" data-view="service-ops">
           <article class="panel">
             <h3 data-i18n="service_ops.title">服务重启</h3>
@@ -1101,6 +1219,8 @@
           "menu.users_manage": "用户管理",
           "menu.create_space": "创建空间",
           "menu.create_room": "创建房间",
+          "menu.room_config": "房间配置",
+          "menu.space_config": "空间配置",
           "menu.bot_ops": "机器人运维",
           "menu.service_ops": "服务重启",
           "hero.title": "安全优先 Matrix 管理台",
@@ -1180,6 +1300,42 @@
           "create_room.parent_space": "父空间 Room ID（可选）",
           "create_room.parent_space_select": "从目录选择父空间（可选）",
           "create_room.submit": "创建房间",
+          "room_config.title": "房间配置",
+          "room_config.hint": "加载并修改已有房间的名称、主题和加入规则。",
+          "room_config.select": "选择房间",
+          "room_config.load": "加载当前配置",
+          "room_config.name": "名称",
+          "room_config.topic": "主题",
+          "room_config.join_rule": "加入规则",
+          "room_config.private": "私有（仅邀请）",
+          "room_config.public": "公开（可直接加入）",
+          "room_config.save": "保存房间配置",
+          "room_config.members_title": "成员配置",
+          "room_config.members_hint": "支持查看当前成员、邀请成员、移除成员。",
+          "room_config.current_members": "当前成员（可多选）",
+          "room_config.member_id": "成员 User ID",
+          "room_config.member_select": "或从目录选择成员",
+          "room_config.members_load": "刷新成员列表",
+          "room_config.member_add": "邀请成员",
+          "room_config.member_remove": "移除已选成员",
+          "space_config.title": "空间配置",
+          "space_config.hint": "加载并修改已有空间的名称、主题和加入规则。",
+          "space_config.select": "选择空间",
+          "space_config.load": "加载当前配置",
+          "space_config.name": "名称",
+          "space_config.topic": "主题",
+          "space_config.join_rule": "加入规则",
+          "space_config.private": "私有（仅邀请）",
+          "space_config.public": "公开（可直接加入）",
+          "space_config.save": "保存空间配置",
+          "space_config.members_title": "成员配置",
+          "space_config.members_hint": "支持查看当前成员、邀请成员、移除成员。",
+          "space_config.current_members": "当前成员（可多选）",
+          "space_config.member_id": "成员 User ID",
+          "space_config.member_select": "或从目录选择成员",
+          "space_config.members_load": "刷新成员列表",
+          "space_config.member_add": "邀请成员",
+          "space_config.member_remove": "移除已选成员",
           "bot_ops.title": "机器人运维",
           "bot_ops.hint": "安全模式下 API 创建机器人默认禁用，建议使用主机脚本创建账号。",
           "bot_ops.create_username": "创建机器人（仅 legacy 模式）",
@@ -1261,6 +1417,12 @@
           "ph.room_alias": "dev-backend",
           "ph.room_invitees": "@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech",
           "ph.room_space_id": "!spaceId:matrix.biglone.tech",
+          "ph.room_config_name": "后端开发群",
+          "ph.room_config_topic": "后端功能讨论",
+          "ph.space_config_name": "研发空间",
+          "ph.space_config_topic": "内部协作",
+          "ph.room_config_member_id": "@alice:matrix.biglone.tech",
+          "ph.space_config_member_id": "@alice:matrix.biglone.tech",
           "ph.bot_username": "devbot",
           "ph.bot_password": "强密码",
           "ph.bot_display_name": "开发机器人",
@@ -1301,6 +1463,8 @@
           "menu.users_manage": "User Management",
           "menu.create_space": "Create Space",
           "menu.create_room": "Create Room",
+          "menu.room_config": "Room Config",
+          "menu.space_config": "Space Config",
           "menu.bot_ops": "Bot Operations",
           "menu.service_ops": "Service Restart",
           "hero.title": "Security-First Matrix Admin",
@@ -1380,6 +1544,42 @@
           "create_room.parent_space": "Parent Space Room ID (optional)",
           "create_room.parent_space_select": "Select parent space from directory (optional)",
           "create_room.submit": "Create Room",
+          "room_config.title": "Room Configuration",
+          "room_config.hint": "Load and update room name, topic, and join rule.",
+          "room_config.select": "Select Room",
+          "room_config.load": "Load Current Config",
+          "room_config.name": "Name",
+          "room_config.topic": "Topic",
+          "room_config.join_rule": "Join Rule",
+          "room_config.private": "Private (invite only)",
+          "room_config.public": "Public (join directly)",
+          "room_config.save": "Save Room Config",
+          "room_config.members_title": "Member Management",
+          "room_config.members_hint": "View current members, invite members, and remove members.",
+          "room_config.current_members": "Current Members (multi-select)",
+          "room_config.member_id": "Member User ID",
+          "room_config.member_select": "Or select member from directory",
+          "room_config.members_load": "Refresh Members",
+          "room_config.member_add": "Invite Member",
+          "room_config.member_remove": "Remove Selected Members",
+          "space_config.title": "Space Configuration",
+          "space_config.hint": "Load and update space name, topic, and join rule.",
+          "space_config.select": "Select Space",
+          "space_config.load": "Load Current Config",
+          "space_config.name": "Name",
+          "space_config.topic": "Topic",
+          "space_config.join_rule": "Join Rule",
+          "space_config.private": "Private (invite only)",
+          "space_config.public": "Public (join directly)",
+          "space_config.save": "Save Space Config",
+          "space_config.members_title": "Member Management",
+          "space_config.members_hint": "View current members, invite members, and remove members.",
+          "space_config.current_members": "Current Members (multi-select)",
+          "space_config.member_id": "Member User ID",
+          "space_config.member_select": "Or select member from directory",
+          "space_config.members_load": "Refresh Members",
+          "space_config.member_add": "Invite Member",
+          "space_config.member_remove": "Remove Selected Members",
           "bot_ops.title": "Bot Operations",
           "bot_ops.hint": "API bot creation is disabled in secure mode. Use host script for account creation.",
           "bot_ops.create_username": "Create Bot (legacy mode only)",
@@ -1461,6 +1661,12 @@
           "ph.room_alias": "dev-backend",
           "ph.room_invitees": "@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech",
           "ph.room_space_id": "!spaceId:matrix.biglone.tech",
+          "ph.room_config_name": "Dev Backend Room",
+          "ph.room_config_topic": "Backend feature discussion",
+          "ph.space_config_name": "Engineering Space",
+          "ph.space_config_topic": "Internal collaboration",
+          "ph.room_config_member_id": "@alice:matrix.biglone.tech",
+          "ph.space_config_member_id": "@alice:matrix.biglone.tech",
           "ph.bot_username": "devbot",
           "ph.bot_password": "Strong password",
           "ph.bot_display_name": "Dev Bot",
@@ -1677,6 +1883,20 @@
       const roomMemberSelectEl = document.getElementById("room-member-select");
       const spaceChildSelectEl = document.getElementById("space-child-select");
       const roomSpaceSelectEl = document.getElementById("room-space-select");
+      const roomConfigSelectEl = document.getElementById("room-config-select");
+      const roomConfigNameEl = document.getElementById("room-config-name");
+      const roomConfigTopicEl = document.getElementById("room-config-topic");
+      const roomConfigJoinRuleEl = document.getElementById("room-config-join-rule");
+      const roomConfigMembersEl = document.getElementById("room-config-members");
+      const roomConfigMemberIdEl = document.getElementById("room-config-member-id");
+      const roomConfigMemberSelectEl = document.getElementById("room-config-member-select");
+      const spaceConfigSelectEl = document.getElementById("space-config-select");
+      const spaceConfigNameEl = document.getElementById("space-config-name");
+      const spaceConfigTopicEl = document.getElementById("space-config-topic");
+      const spaceConfigJoinRuleEl = document.getElementById("space-config-join-rule");
+      const spaceConfigMembersEl = document.getElementById("space-config-members");
+      const spaceConfigMemberIdEl = document.getElementById("space-config-member-id");
+      const spaceConfigMemberSelectEl = document.getElementById("space-config-member-select");
       const inviteBotSelectEl = document.getElementById("invite-bot-select");
       const inviteRoomSelectEl = document.getElementById("invite-room-select");
       const inviteBotPasswordEl = document.getElementById("invite-bot-password");
@@ -1981,6 +2201,12 @@
         return { value: user.user_id || "", label: `${name} [${tag}] · ${user.user_id || ""}` };
       }
 
+      function toMemberOption(member) {
+        const display = member.display_name || member.user_id || "";
+        const tag = member.is_bot ? t("common.bot_tag") : t("common.user_tag");
+        return { value: member.user_id || "", label: `${display} [${tag}] · ${member.user_id || ""}` };
+      }
+
       function refreshDirectoryOptions() {
         const spaces = state.spaces
           .filter((item) => item.room_id)
@@ -2030,6 +2256,10 @@
         setMultiSelectOptions(roomMemberSelectEl, memberOptions);
         setMultiSelectOptions(spaceChildSelectEl, rooms.map(toRoomOption));
         setSingleSelectOptions(roomSpaceSelectEl, spaces.map(toSpaceOption));
+        setSingleSelectOptions(roomConfigSelectEl, rooms.map(toRoomOption));
+        setSingleSelectOptions(spaceConfigSelectEl, spaces.map(toSpaceOption));
+        setSingleSelectOptions(roomConfigMemberSelectEl, memberOptions);
+        setSingleSelectOptions(spaceConfigMemberSelectEl, memberOptions);
         setSingleSelectOptions(inviteBotSelectEl, bots.map(toBotOption));
         setSingleSelectOptions(inviteRoomSelectEl, rooms.map(toRoomOption));
         setMultiSelectOptions(botCreateRoomsSelectEl, rooms.map(toRoomOption));
@@ -2313,6 +2543,182 @@
         refreshDirectoryOptions();
       }
 
+      function fillRoomConfigForm(payload) {
+        roomConfigNameEl.value = payload.name || "";
+        roomConfigTopicEl.value = payload.topic || "";
+        roomConfigJoinRuleEl.value = payload.join_rule === "public" ? "public" : "invite";
+      }
+
+      function fillSpaceConfigForm(payload) {
+        spaceConfigNameEl.value = payload.name || "";
+        spaceConfigTopicEl.value = payload.topic || "";
+        spaceConfigJoinRuleEl.value = payload.join_rule === "public" ? "public" : "invite";
+      }
+
+      async function loadRoomConfig() {
+        const roomId = (roomConfigSelectEl?.value || "").trim();
+        if (!roomId) {
+          throw new Error("room_id is required.");
+        }
+        const payload = await requestApi(`/api/rooms/${encodeURIComponent(roomId)}/config`, { headers: getHeaders(false) });
+        fillRoomConfigForm(payload);
+        return payload;
+      }
+
+      async function saveRoomConfig() {
+        const roomId = (roomConfigSelectEl?.value || "").trim();
+        if (!roomId) {
+          throw new Error("room_id is required.");
+        }
+        const payload = await requestApi(`/api/rooms/${encodeURIComponent(roomId)}/config`, {
+          method: "POST",
+          headers: getHeaders(true),
+          body: JSON.stringify({
+            name: roomConfigNameEl.value.trim(),
+            topic: roomConfigTopicEl.value.trim(),
+            join_rule: roomConfigJoinRuleEl.value
+          })
+        });
+        fillRoomConfigForm(payload);
+        await loadOverview();
+        return payload;
+      }
+
+      async function loadRoomMembers() {
+        const roomId = (roomConfigSelectEl?.value || "").trim();
+        if (!roomId) {
+          throw new Error("room_id is required.");
+        }
+        const payload = await requestApi(`/api/rooms/${encodeURIComponent(roomId)}/members`, { headers: getHeaders(false) });
+        const members = Array.isArray(payload.members) ? payload.members : [];
+        setMultiSelectOptions(roomConfigMembersEl, members.map(toMemberOption));
+        return payload;
+      }
+
+      async function inviteRoomMember() {
+        const roomId = (roomConfigSelectEl?.value || "").trim();
+        if (!roomId) {
+          throw new Error("room_id is required.");
+        }
+        const userId = (roomConfigMemberIdEl?.value || "").trim() || (roomConfigMemberSelectEl?.value || "").trim();
+        if (!userId) {
+          throw new Error("user_id is required.");
+        }
+        const payload = await requestApi(`/api/rooms/${encodeURIComponent(roomId)}/members/invite`, {
+          method: "POST",
+          headers: getHeaders(true),
+          body: JSON.stringify({ user_id: userId })
+        });
+        await loadRoomMembers();
+        await loadOverview();
+        return payload;
+      }
+
+      async function removeRoomMembers() {
+        const roomId = (roomConfigSelectEl?.value || "").trim();
+        if (!roomId) {
+          throw new Error("room_id is required.");
+        }
+        const selected = uniqueList(getSelectedValues(roomConfigMembersEl));
+        if (selected.length === 0) {
+          throw new Error("select at least one member to remove.");
+        }
+        const removed = [];
+        for (const userId of selected) {
+          const payload = await requestApi(`/api/rooms/${encodeURIComponent(roomId)}/members/remove`, {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({ user_id: userId, reason: "removed_from_control_panel" })
+          });
+          removed.push(payload);
+        }
+        await loadRoomMembers();
+        await loadOverview();
+        return { room_id: roomId, removed_count: removed.length, removed };
+      }
+
+      async function loadSpaceConfig() {
+        const spaceRoomId = (spaceConfigSelectEl?.value || "").trim();
+        if (!spaceRoomId) {
+          throw new Error("space_room_id is required.");
+        }
+        const payload = await requestApi(`/api/spaces/${encodeURIComponent(spaceRoomId)}/config`, { headers: getHeaders(false) });
+        fillSpaceConfigForm(payload);
+        return payload;
+      }
+
+      async function saveSpaceConfig() {
+        const spaceRoomId = (spaceConfigSelectEl?.value || "").trim();
+        if (!spaceRoomId) {
+          throw new Error("space_room_id is required.");
+        }
+        const payload = await requestApi(`/api/spaces/${encodeURIComponent(spaceRoomId)}/config`, {
+          method: "POST",
+          headers: getHeaders(true),
+          body: JSON.stringify({
+            name: spaceConfigNameEl.value.trim(),
+            topic: spaceConfigTopicEl.value.trim(),
+            join_rule: spaceConfigJoinRuleEl.value
+          })
+        });
+        fillSpaceConfigForm(payload);
+        await loadOverview();
+        return payload;
+      }
+
+      async function loadSpaceMembers() {
+        const spaceRoomId = (spaceConfigSelectEl?.value || "").trim();
+        if (!spaceRoomId) {
+          throw new Error("space_room_id is required.");
+        }
+        const payload = await requestApi(`/api/spaces/${encodeURIComponent(spaceRoomId)}/members`, { headers: getHeaders(false) });
+        const members = Array.isArray(payload.members) ? payload.members : [];
+        setMultiSelectOptions(spaceConfigMembersEl, members.map(toMemberOption));
+        return payload;
+      }
+
+      async function inviteSpaceMember() {
+        const spaceRoomId = (spaceConfigSelectEl?.value || "").trim();
+        if (!spaceRoomId) {
+          throw new Error("space_room_id is required.");
+        }
+        const userId = (spaceConfigMemberIdEl?.value || "").trim() || (spaceConfigMemberSelectEl?.value || "").trim();
+        if (!userId) {
+          throw new Error("user_id is required.");
+        }
+        const payload = await requestApi(`/api/spaces/${encodeURIComponent(spaceRoomId)}/members/invite`, {
+          method: "POST",
+          headers: getHeaders(true),
+          body: JSON.stringify({ user_id: userId })
+        });
+        await loadSpaceMembers();
+        await loadOverview();
+        return payload;
+      }
+
+      async function removeSpaceMembers() {
+        const spaceRoomId = (spaceConfigSelectEl?.value || "").trim();
+        if (!spaceRoomId) {
+          throw new Error("space_room_id is required.");
+        }
+        const selected = uniqueList(getSelectedValues(spaceConfigMembersEl));
+        if (selected.length === 0) {
+          throw new Error("select at least one member to remove.");
+        }
+        const removed = [];
+        for (const userId of selected) {
+          const payload = await requestApi(`/api/spaces/${encodeURIComponent(spaceRoomId)}/members/remove`, {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({ user_id: userId, reason: "removed_from_control_panel" })
+          });
+          removed.push(payload);
+        }
+        await loadSpaceMembers();
+        await loadOverview();
+        return { room_id: spaceRoomId, removed_count: removed.length, removed };
+      }
+
       function updateFullUsersPageInfo() {
         document.getElementById("full-users-page-info").textContent = pagerText(
           state.fullUsers.page || 1,
@@ -2558,6 +2964,8 @@
           "users-manage": t("menu.users_manage"),
           "create-space": t("menu.create_space"),
           "create-room": t("menu.create_room"),
+          "room-config": t("menu.room_config"),
+          "space-config": t("menu.space_config"),
           "service-ops": t("menu.service_ops"),
           "bot-ops": t("menu.bot_ops")
         };
@@ -2695,12 +3103,26 @@
         }
       });
 
+      roomConfigMemberSelectEl.addEventListener("change", () => {
+        if (!roomConfigMemberIdEl.value.trim()) {
+          roomConfigMemberIdEl.value = roomConfigMemberSelectEl.value;
+        }
+      });
+
+      spaceConfigMemberSelectEl.addEventListener("change", () => {
+        if (!spaceConfigMemberIdEl.value.trim()) {
+          spaceConfigMemberIdEl.value = spaceConfigMemberSelectEl.value;
+        }
+      });
+
       [
         spaceMemberSelectEl,
         roomMemberSelectEl,
         spaceChildSelectEl,
         botCreateRoomsSelectEl,
-        userCreateRoomsSelectEl
+        userCreateRoomsSelectEl,
+        roomConfigMembersEl,
+        spaceConfigMembersEl
       ].forEach(enableClickToggleMultiSelect);
 
       document.getElementById("btn-check").addEventListener("click", () => {
@@ -2757,6 +3179,76 @@
           return;
         }
         withStatus(registrationStatusEl, closeRegistrationWindow);
+      });
+
+      document.getElementById("btn-room-config-load").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("room-config-status"), loadRoomConfig);
+      });
+
+      document.getElementById("btn-room-config-save").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("room-config-status"), saveRoomConfig);
+      });
+
+      document.getElementById("btn-space-config-load").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("space-config-status"), loadSpaceConfig);
+      });
+
+      document.getElementById("btn-space-config-save").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("space-config-status"), saveSpaceConfig);
+      });
+
+      document.getElementById("btn-room-config-members-load").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("room-config-member-status"), loadRoomMembers);
+      });
+
+      document.getElementById("btn-room-config-member-add").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("room-config-member-status"), inviteRoomMember);
+      });
+
+      document.getElementById("btn-room-config-member-remove").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("room-config-member-status"), removeRoomMembers);
+      });
+
+      document.getElementById("btn-space-config-members-load").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("space-config-member-status"), loadSpaceMembers);
+      });
+
+      document.getElementById("btn-space-config-member-add").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("space-config-member-status"), inviteSpaceMember);
+      });
+
+      document.getElementById("btn-space-config-member-remove").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(document.getElementById("space-config-member-status"), removeSpaceMembers);
       });
 
       openSettingsBtnEl.addEventListener("click", () => {
