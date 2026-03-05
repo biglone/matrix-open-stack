@@ -41,9 +41,15 @@
 | `INVITE_RATE_LIMIT_MAX` | `12` | 时间窗内最大邀请次数 | 邀请频率策略调整时 |
 | `DOCKER_GID` | `979` | 管理页重启功能访问 `docker.sock` 的组 ID | 主机 `docker.sock` 组变化时（`stat -c '%g' /var/run/docker.sock`） |
 | `RESTART_API_MODE` | `disabled` | 管理页服务重启模式：`disabled` / `docker_socket` | 需要在管理页触发重启时设为 `docker_socket` |
+| `REGISTRATION_WINDOW_API_MODE` | `disabled` | 管理页临时创建窗口模式：`disabled` / `docker_socket` | 需要在管理页一键开/关临时创建窗口时设为 `docker_socket` |
+| `REGISTRATION_WINDOW_DEFAULT_MINUTES` | `10` | 临时创建窗口默认分钟数 | 默认时长需要调整时 |
+| `REGISTRATION_WINDOW_MAX_MINUTES` | `60` | 临时创建窗口最大分钟数 | 需要限制最大开放时长时 |
+| `REGISTRATION_WINDOW_STATE_PATH` | `/var/log/matrix-control/registration-window-state.json` | 临时窗口状态持久化路径 | 自定义状态目录时 |
 | `DOCKER_SOCKET_PATH` | `/var/run/docker.sock` | Docker Engine Socket 路径 | Docker socket 非默认路径时 |
 | `COMPOSE_PROJECT_NAME` | `matrix-open-stack` | Compose 项目名（用于定位容器名） | 目录名变化或自定义 project name 时 |
 | `RESTART_TIMEOUT_SECONDS` | `20` | 单个容器重启超时（秒） | 容器停机较慢时 |
+| `STACK_HOST_PATH` | 空 | 宿主机项目绝对路径（用于 UI 临时窗口修改 conf） | 项目目录变化时必须更新 |
+| `HOST_HELPER_IMAGE` | `local/matrix-control-api:0.1.0` | 控制面执行宿主机配置修改的 helper 镜像 | 镜像标签变更时 |
 
 ## 推荐配置方案
 
@@ -103,6 +109,8 @@ docker compose up -d --build
 ```
 
 脚本会在窗口期临时启用注册与 API 创建模式，结束后自动恢复为安全配置。
+
+也可以在管理页 `服务重启` -> `临时创建窗口` 直接操作（需先设置 `REGISTRATION_WINDOW_API_MODE=docker_socket` 和 `STACK_HOST_PATH`）。
 
 ## 安全提醒
 

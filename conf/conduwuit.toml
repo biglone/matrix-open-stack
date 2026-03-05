@@ -1,5 +1,5 @@
 [global]
-server_name = "matrix.example.com"
+server_name = "matrix.biglone.tech"
 database_path = "/var/lib/conduwuit"
 address = ["0.0.0.0"]
 port = 6167

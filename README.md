@@ -52,6 +52,10 @@ Local URLs:
 4. Optional restart controls (for UI-triggered restart):
    - `RESTART_API_MODE=disabled|docker_socket` (default `disabled`)
    - `DOCKER_GID` should match host `docker.sock` group id (`stat -c '%g' /var/run/docker.sock`)
+5. Optional temporary registration window controls (for UI-triggered open/close):
+   - `REGISTRATION_WINDOW_API_MODE=disabled|docker_socket` (default `disabled`)
+   - `STACK_HOST_PATH` should point to this repo absolute path on host
+   - `HOST_HELPER_IMAGE` defaults to `local/matrix-control-api:0.1.0`
 
 Detailed field-by-field guide:
 
@@ -122,6 +126,9 @@ All endpoints below require `Authorization: Bearer <CONTROL_API_TOKEN>`.
 - `POST /api/bots/{user_id}/status` (`active|archived|deleted`, logical status in control-plane)
 - `POST /api/users/{user_id}/status` (`active|archived|deleted`, logical status in control-plane)
 - `POST /api/ops/restart` (`matrix|control_api|stack`, disabled by default)
+- `GET /api/ops/registration-window`
+- `POST /api/ops/registration-window/open` (temporary user/bot create window, auto-close)
+- `POST /api/ops/registration-window/close`
 
 Notes on list scope:
 
@@ -178,7 +185,10 @@ git clone https://github.com/girlbossceo/conduwuit.git
 
 ## Temporary Registration Window
 
-For short-term onboarding (users and bots) with auto-close:
+For short-term onboarding (users and bots) with auto-close, you now have two options:
+
+1. Admin UI: `服务重启` page -> `临时创建窗口`
+2. Host script:
 
 ```bash
 ./scripts/open_registration_window.sh --minutes 10
