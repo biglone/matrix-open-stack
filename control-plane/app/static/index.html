@@ -610,13 +610,13 @@
                 <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4z" /><path d="M4 12l8 4 8-4" /><path d="M4 16l8 4 8-4" /></svg></span>
                 <span data-i18n="menu.create_space">创建空间</span>
               </button>
-              <button data-view-target="users-manage">
-                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" /><path d="M16 12a2.5 2.5 0 1 0 0-5" /><path d="M4 19a4 4 0 0 1 8 0" /><path d="M14 19a3 3 0 0 1 6 0" /></svg></span>
-                <span data-i18n="menu.users_manage">用户管理</span>
-              </button>
               <button data-view-target="create-room">
                 <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z" /><path d="M9 10h6" /></svg></span>
                 <span data-i18n="menu.create_room">创建房间</span>
+              </button>
+              <button data-view-target="users-manage">
+                <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" /><path d="M16 12a2.5 2.5 0 1 0 0-5" /><path d="M4 19a4 4 0 0 1 8 0" /><path d="M14 19a3 3 0 0 1 6 0" /></svg></span>
+                <span data-i18n="menu.users_manage">用户管理</span>
               </button>
               <button data-view-target="bot-ops">
                 <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4h6" /><path d="M12 4v3" /><rect x="6" y="7" width="12" height="11" rx="2" /><path d="M10 12h.01" /><path d="M14 12h.01" /><path d="M9 16h6" /></svg></span>
@@ -978,6 +978,41 @@
               <button id="btn-restart-stack" class="danger" data-i18n="service_ops.restart_stack">重启全栈</button>
             </div>
             <div id="restart-status" class="status" data-i18n="common.ready">就绪。</div>
+
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0" />
+
+            <h3 data-i18n="service_ops.regwin_title">临时创建窗口</h3>
+            <p class="hint" data-i18n="service_ops.regwin_hint">
+              一键临时开放用户/机器人创建，自动回关恢复安全模式。
+            </p>
+            <div id="registration-capability" class="status warn" data-i18n="service_ops.regwin_capability.disabled">
+              临时窗口 API 未启用：请设置 REGISTRATION_WINDOW_API_MODE=docker_socket
+            </div>
+            <div class="row">
+              <div>
+                <label for="registration-minutes" data-i18n="service_ops.regwin_minutes">开放分钟数</label>
+                <input id="registration-minutes" type="number" min="1" max="60" value="10" />
+              </div>
+              <div>
+                <label for="registration-reason" data-i18n="service_ops.regwin_reason">操作备注（可选）</label>
+                <input id="registration-reason" data-i18n-placeholder="ph.registration_reason" placeholder="例如：创建开发用户与机器人" />
+              </div>
+            </div>
+            <div class="row">
+              <label style="display:flex; align-items:center; gap:8px; margin:0;">
+                <input id="registration-scope-users" type="checkbox" checked style="width:auto;" />
+                <span data-i18n="service_ops.regwin_scope_users">允许创建普通用户</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin:0;">
+                <input id="registration-scope-bots" type="checkbox" checked style="width:auto;" />
+                <span data-i18n="service_ops.regwin_scope_bots">允许创建机器人</span>
+              </label>
+            </div>
+            <div class="row">
+              <button id="btn-registration-open" class="warn" data-i18n="service_ops.regwin_open">开启临时窗口</button>
+              <button id="btn-registration-close" class="danger" data-i18n="service_ops.regwin_close">立即关闭窗口</button>
+            </div>
+            <div id="registration-status" class="status" data-i18n="service_ops.regwin_status.inactive">当前没有临时创建窗口。</div>
           </article>
         </section>
 
@@ -1018,9 +1053,12 @@
                 <input id="invite-room-id" data-i18n-placeholder="ph.invite_room_id" placeholder="!roomId:matrix.biglone.tech" />
                 <label for="invite-room-select" data-i18n="bot_ops.invite_room_select">或从房间列表选择</label>
                 <select id="invite-room-select"></select>
+                <label for="invite-bot-password" data-i18n="bot_ops.invite_password">机器人密码（可选，用于自动加入）</label>
+                <input id="invite-bot-password" type="password" data-i18n-placeholder="ph.bot_password" placeholder="强密码" />
               </div>
             </div>
             <button id="btn-bot-invite" data-i18n="bot_ops.invite_submit">邀请机器人进房间</button>
+            <p class="hint" data-i18n="bot_ops.invite_hint">本面板创建的机器人会自动免密加入；仅外部导入机器人首次需要补一次密码。</p>
             <div id="invite-status" class="status" data-i18n="common.ready">就绪。</div>
           </article>
         </section>
@@ -1149,7 +1187,9 @@
           "bot_ops.invite_user_select": "或从机器人列表选择",
           "bot_ops.invite_room_id": "目标 Room ID",
           "bot_ops.invite_room_select": "或从房间列表选择",
+          "bot_ops.invite_password": "机器人密码（可选，用于自动加入）",
           "bot_ops.invite_submit": "邀请机器人进房间",
+          "bot_ops.invite_hint": "本面板创建的机器人会自动免密加入；仅外部导入机器人首次需要补一次密码。",
           "service_ops.title": "服务重启",
           "service_ops.hint": "通过受控 API 触发容器重启。默认关闭，需要在 .env 显式启用。",
           "service_ops.reason_label": "操作备注（可选）",
@@ -1161,6 +1201,19 @@
           "service_ops.capability.error": "重启 API 检查失败：{error}",
           "service_ops.confirm": "确认执行“{target}”吗？",
           "service_ops.reconnect_note": "已下发重启任务。若管理页短暂断连，请等待 3-8 秒后刷新。",
+          "service_ops.regwin_title": "临时创建窗口",
+          "service_ops.regwin_hint": "在管理页临时开放用户/机器人创建能力，到时自动回关。",
+          "service_ops.regwin_minutes": "开放分钟数",
+          "service_ops.regwin_reason": "操作备注（可选）",
+          "service_ops.regwin_scope_users": "允许创建普通用户",
+          "service_ops.regwin_scope_bots": "允许创建机器人",
+          "service_ops.regwin_open": "开启临时窗口",
+          "service_ops.regwin_close": "立即关闭窗口",
+          "service_ops.regwin_capability.disabled": "临时窗口 API 未启用：请设置 REGISTRATION_WINDOW_API_MODE=docker_socket",
+          "service_ops.regwin_capability.enabled": "临时窗口 API 已启用（默认 {minutes} 分钟，最大 {max} 分钟）。",
+          "service_ops.regwin_status.active": "窗口已开启：剩余 {seconds}s，用户创建={users}，机器人创建={bots}，到期={expires}",
+          "service_ops.regwin_status.inactive": "当前没有临时创建窗口。",
+          "service_ops.regwin_confirm_close": "确认立即关闭临时创建窗口吗？",
           "common.prev": "上一页",
           "common.next": "下一页",
           "common.no_data": "暂无数据。",
@@ -1210,7 +1263,8 @@
           "ph.user_username": "alice",
           "ph.user_password": "留空则自动生成",
           "ph.user_display_name": "Alice",
-          "ph.restart_reason": "例如：应用新配置字段"
+          "ph.restart_reason": "例如：应用新配置字段",
+          "ph.registration_reason": "例如：创建开发用户与机器人"
         },
         en: {
           "brand.title": "Matrix Control Panel",
@@ -1332,7 +1386,9 @@
           "bot_ops.invite_user_select": "Or select from bot list",
           "bot_ops.invite_room_id": "Target Room ID",
           "bot_ops.invite_room_select": "Or select from room list",
+          "bot_ops.invite_password": "Bot password (optional, for auto-join)",
           "bot_ops.invite_submit": "Invite Bot to Room",
+          "bot_ops.invite_hint": "Bots created from this panel auto-join without entering password. Imported legacy bots need one-time password sync.",
           "service_ops.title": "Service Restart",
           "service_ops.hint": "Trigger controlled container restarts via API. Disabled by default and must be explicitly enabled in .env.",
           "service_ops.reason_label": "Operation note (optional)",
@@ -1344,6 +1400,19 @@
           "service_ops.capability.error": "Restart API check failed: {error}",
           "service_ops.confirm": "Confirm to run \"{target}\"?",
           "service_ops.reconnect_note": "Restart request scheduled. If the panel disconnects briefly, wait 3-8 seconds and refresh.",
+          "service_ops.regwin_title": "Temporary Create Window",
+          "service_ops.regwin_hint": "Temporarily open user/bot creation in the panel, then auto-close back to secure mode.",
+          "service_ops.regwin_minutes": "Open for minutes",
+          "service_ops.regwin_reason": "Operation note (optional)",
+          "service_ops.regwin_scope_users": "Allow user creation",
+          "service_ops.regwin_scope_bots": "Allow bot creation",
+          "service_ops.regwin_open": "Open Temporary Window",
+          "service_ops.regwin_close": "Close Window Now",
+          "service_ops.regwin_capability.disabled": "Registration window API is disabled. Set REGISTRATION_WINDOW_API_MODE=docker_socket.",
+          "service_ops.regwin_capability.enabled": "Registration window API is enabled (default {minutes} min, max {max} min).",
+          "service_ops.regwin_status.active": "Window active: {seconds}s left, users={users}, bots={bots}, expires={expires}",
+          "service_ops.regwin_status.inactive": "No temporary create window is active.",
+          "service_ops.regwin_confirm_close": "Close the temporary create window now?",
           "common.prev": "Prev",
           "common.next": "Next",
           "common.no_data": "No data.",
@@ -1393,7 +1462,8 @@
           "ph.user_username": "alice",
           "ph.user_password": "Leave blank for auto-generated",
           "ph.user_display_name": "Alice",
-          "ph.restart_reason": "Example: apply updated config fields"
+          "ph.restart_reason": "Example: apply updated config fields",
+          "ph.registration_reason": "Example: create dev users and bots"
         }
       };
 
@@ -1531,6 +1601,42 @@
           change: { zh: "需要在管理页触发服务重启时设为 docker_socket", en: "Set to docker_socket when restart from UI is required" }
         },
         {
+          field: "REGISTRATION_WINDOW_API_MODE",
+          defaultValue: "disabled",
+          purpose: { zh: "管理页临时创建窗口 API 模式（disabled / docker_socket）", en: "Temporary create-window API mode (disabled / docker_socket)" },
+          change: { zh: "需要在管理页一键临时开放用户/机器人创建时设为 docker_socket", en: "Set to docker_socket to open/close temporary create window from UI" }
+        },
+        {
+          field: "REGISTRATION_WINDOW_DEFAULT_MINUTES",
+          defaultValue: "10",
+          purpose: { zh: "临时窗口默认分钟数", en: "Default duration (minutes) for temporary window" },
+          change: { zh: "默认操作时长需要调整时", en: "When default operation duration should change" }
+        },
+        {
+          field: "REGISTRATION_WINDOW_MAX_MINUTES",
+          defaultValue: "60",
+          purpose: { zh: "临时窗口允许的最大分钟数", en: "Max allowed duration (minutes) for temporary window" },
+          change: { zh: "限制窗口最大开放时长时", en: "When limiting maximum open duration" }
+        },
+        {
+          field: "REGISTRATION_WINDOW_STATE_PATH",
+          defaultValue: "/var/log/matrix-control/registration-window-state.json",
+          purpose: { zh: "临时窗口状态持久化文件", en: "Persisted state file for registration window" },
+          change: { zh: "自定义审计/状态存储目录时", en: "When using custom audit/state directory" }
+        },
+        {
+          field: "STACK_HOST_PATH",
+          defaultValue: "/home/Biglone/workspace/matrix-open-stack",
+          purpose: { zh: "宿主机项目路径（用于修改 conf 并重启 matrix）", en: "Host stack path (used to edit conf and restart matrix)" },
+          change: { zh: "项目迁移到其他目录时", en: "When project path changes on host" }
+        },
+        {
+          field: "HOST_HELPER_IMAGE",
+          defaultValue: "local/matrix-control-api:0.1.0",
+          purpose: { zh: "执行宿主机配置修改的 helper 容器镜像", en: "Helper image used for host-side config mutation" },
+          change: { zh: "镜像标签变更或升级时", en: "When image tag changes or upgrades" }
+        },
+        {
           field: "DOCKER_SOCKET_PATH",
           defaultValue: "/var/run/docker.sock",
           purpose: { zh: "Docker Engine Unix Socket 路径", en: "Docker Engine Unix socket path" },
@@ -1566,12 +1672,19 @@
       const roomSpaceSelectEl = document.getElementById("room-space-select");
       const inviteBotSelectEl = document.getElementById("invite-bot-select");
       const inviteRoomSelectEl = document.getElementById("invite-room-select");
+      const inviteBotPasswordEl = document.getElementById("invite-bot-password");
       const botCreateRoomsSelectEl = document.getElementById("bot-create-rooms");
       const userCreateRoomsSelectEl = document.getElementById("user-create-rooms");
       const envDocsSearchEl = document.getElementById("env-docs-search");
       const restartReasonEl = document.getElementById("restart-reason");
       const restartCapabilityEl = document.getElementById("restart-capability");
       const restartStatusEl = document.getElementById("restart-status");
+      const registrationMinutesEl = document.getElementById("registration-minutes");
+      const registrationReasonEl = document.getElementById("registration-reason");
+      const registrationScopeUsersEl = document.getElementById("registration-scope-users");
+      const registrationScopeBotsEl = document.getElementById("registration-scope-bots");
+      const registrationCapabilityEl = document.getElementById("registration-capability");
+      const registrationStatusEl = document.getElementById("registration-status");
 
       let currentLang = "zh";
 
@@ -1601,7 +1714,17 @@
         },
         config: {
           restart_api_mode: "disabled",
-          compose_project_name: "matrix-open-stack"
+          compose_project_name: "matrix-open-stack",
+          registration_window_api_mode: "disabled",
+          registration_window_default_minutes: 10,
+          registration_window_max_minutes: 60,
+          registration_window_state: {
+            active: false,
+            remaining_seconds: 0,
+            scope_users: false,
+            scope_bots: false,
+            expires_at: ""
+          }
         },
         flags: {
           firstBootstrapDone: false
@@ -1679,6 +1802,8 @@
         updateFullUsersPageInfo();
         refreshDirectoryOptions();
         renderRestartCapability();
+        renderRegistrationCapability();
+        renderRegistrationWindowStatus();
         setConnectionState(state.ui.connectionKey, state.ui.connectionTone);
       }
 
@@ -1708,6 +1833,51 @@
           return;
         }
         setStatus(restartCapabilityEl, t("service_ops.capability.disabled"), "warn");
+      }
+
+      function renderRegistrationCapability() {
+        if (!registrationCapabilityEl) {
+          return;
+        }
+        const mode = String(state.config.registration_window_api_mode || "disabled");
+        if (mode === "docker_socket") {
+          setStatus(
+            registrationCapabilityEl,
+            t("service_ops.regwin_capability.enabled", {
+              minutes: state.config.registration_window_default_minutes ?? 10,
+              max: state.config.registration_window_max_minutes ?? 60
+            }),
+            "ok"
+          );
+          return;
+        }
+        setStatus(registrationCapabilityEl, t("service_ops.regwin_capability.disabled"), "warn");
+      }
+
+      function renderRegistrationWindowStatus() {
+        if (!registrationStatusEl) {
+          return;
+        }
+        const windowState = state.config.registration_window_state || {};
+        const active = Boolean(windowState.active);
+        if (!active) {
+          setStatus(registrationStatusEl, t("service_ops.regwin_status.inactive"), "ok");
+          return;
+        }
+        const remaining = Number(windowState.remaining_seconds || 0);
+        const users = windowState.scope_users ? t("common.yes") : t("common.no");
+        const bots = windowState.scope_bots ? t("common.yes") : t("common.no");
+        const expires = windowState.expires_at || t("snapshot.time_unknown");
+        setStatus(
+          registrationStatusEl,
+          t("service_ops.regwin_status.active", {
+            seconds: remaining,
+            users,
+            bots,
+            expires
+          }),
+          "warn"
+        );
       }
 
       function openSettingsPanel() {
@@ -1802,14 +1972,31 @@
           .slice()
           .sort((a, b) => (a.user_id || "").localeCompare(b.user_id || ""));
 
-        const directoryUsers =
-          state.directory.users.length > 0
-            ? state.directory.users
-            : bots.map((bot) => ({
-                user_id: bot.user_id,
-                username: bot.username || bot.display_name || bot.user_id,
-                is_bot: true
-              }));
+        const directoryUsersMap = new Map();
+        state.directory.users.forEach((user) => {
+          const userId = (user?.user_id || "").trim();
+          if (!userId) {
+            return;
+          }
+          directoryUsersMap.set(userId, {
+            user_id: userId,
+            username: user.username || userId,
+            is_bot: Boolean(user.is_bot)
+          });
+        });
+        bots.forEach((bot) => {
+          const userId = (bot?.user_id || "").trim();
+          if (!userId) {
+            return;
+          }
+          const existing = directoryUsersMap.get(userId);
+          directoryUsersMap.set(userId, {
+            user_id: userId,
+            username: (existing && existing.username) || bot.username || bot.display_name || userId,
+            is_bot: true,
+          });
+        });
+        const directoryUsers = Array.from(directoryUsersMap.values());
 
         const memberOptions = directoryUsers
           .filter((item) => item.user_id)
@@ -1856,12 +2043,22 @@
           throw err;
         }
         setConnectionState("connection.connected", "ok");
-        const payload = await response.json().catch(() => ({}));
+        const contentType = (response.headers.get("content-type") || "").toLowerCase();
+        let payload = {};
+        let rawBody = "";
+        if (contentType.includes("application/json")) {
+          payload = await response.json().catch(() => ({}));
+        } else {
+          rawBody = await response.text().catch(() => "");
+        }
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
             setConnectionState("connection.auth_failed", "err");
           }
-          throw new Error(`HTTP ${response.status} ${JSON.stringify(payload)}`);
+          const payloadText = payload && Object.keys(payload).length ? JSON.stringify(payload) : "";
+          const bodyText = (rawBody || "").trim();
+          const detail = payloadText || bodyText || response.statusText || "empty response body";
+          throw new Error(`HTTP ${response.status} ${detail}`);
         }
         return payload;
       }
@@ -2202,21 +2399,128 @@
             })
           });
 
-          if (target === "control_api" || target === "stack") {
-            setTimeout(async () => {
-              try {
-                await refreshAllData();
-              } catch (err) {
-                setStatus(configStatusEl, `${t("status.error_prefix")}: ${err}`, "warn");
-              }
-            }, 5000);
+          if (target === "matrix" || target === "control_api" || target === "stack") {
+            refreshAllDataAfterRestart(target);
             return { ...payload, note: t("service_ops.reconnect_note") };
           }
-
-          await loadOverview();
-          await loadUserDirectory();
           return payload;
         });
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      function isRetriableRefreshError(err) {
+        const text = String(err || "");
+        return (
+          text.includes("HTTP 502") ||
+          text.includes("HTTP 503") ||
+          text.includes("HTTP 504") ||
+          text.includes("NetworkError") ||
+          text.includes("Failed to fetch")
+        );
+      }
+
+      async function refreshAllDataInternal() {
+        const cfg = await requestApi("/api/config", { headers: getHeaders(false) });
+        state.config = { ...state.config, ...(cfg || {}) };
+        const maxMinutes = Number(state.config.registration_window_max_minutes || 60);
+        const defaultMinutes = Number(state.config.registration_window_default_minutes || 10);
+        if (registrationMinutesEl) {
+          registrationMinutesEl.max = String(maxMinutes);
+          if (!registrationMinutesEl.value) {
+            registrationMinutesEl.value = String(defaultMinutes);
+          }
+        }
+        await loadOverview();
+        await loadUserDirectory();
+        renderRestartCapability();
+        renderRegistrationCapability();
+        renderRegistrationWindowStatus();
+        return cfg;
+      }
+
+      async function refreshAllDataAfterRestart(target) {
+        const initialDelayMs = target === "matrix" ? 8000 : 5000;
+        const maxAttempts = target === "matrix" ? 8 : 5;
+        const intervalMs = 2500;
+        setStatus(configStatusEl, "Service restarting, waiting for recovery...", "warn");
+        await sleep(initialDelayMs);
+
+        let lastErr = null;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            await refreshAllDataInternal();
+            setStatus(configStatusEl, "Data refreshed after restart.", "ok");
+            return;
+          } catch (err) {
+            lastErr = err;
+            if (!isRetriableRefreshError(err) || attempt === maxAttempts) {
+              break;
+            }
+            setStatus(
+              configStatusEl,
+              `Service recovering... retry ${attempt}/${maxAttempts}`,
+              "warn"
+            );
+            await sleep(intervalMs);
+          }
+        }
+        setStatus(configStatusEl, `${t("status.error_prefix")}: ${lastErr}`, "warn");
+      }
+
+      async function openRegistrationWindow() {
+        const minutes = Number(registrationMinutesEl?.value || state.config.registration_window_default_minutes || 10);
+        const scopeUsers = Boolean(registrationScopeUsersEl?.checked);
+        const scopeBots = Boolean(registrationScopeBotsEl?.checked);
+        if (!scopeUsers && !scopeBots) {
+          throw new Error("scope_users or scope_bots is required.");
+        }
+        const payload = await requestApi("/api/ops/registration-window/open", {
+          method: "POST",
+          headers: getHeaders(true),
+          body: JSON.stringify({
+            minutes,
+            scope_users: scopeUsers,
+            scope_bots: scopeBots,
+            reason: (registrationReasonEl?.value || "").trim() || null
+          })
+        });
+        state.config.registration_window_state = payload.state || state.config.registration_window_state;
+        renderRegistrationWindowStatus();
+        setTimeout(async () => {
+          try {
+            await refreshAllData();
+          } catch (err) {
+            setStatus(configStatusEl, `${t("status.error_prefix")}: ${err}`, "warn");
+          }
+        }, 3000);
+        return payload;
+      }
+
+      async function closeRegistrationWindow() {
+        const confirmed = window.confirm(t("service_ops.regwin_confirm_close"));
+        if (!confirmed) {
+          return { skipped: true };
+        }
+        const payload = await requestApi("/api/ops/registration-window/close", {
+          method: "POST",
+          headers: getHeaders(true),
+          body: JSON.stringify({
+            reason: (registrationReasonEl?.value || "").trim() || null
+          })
+        });
+        state.config.registration_window_state = payload.state || state.config.registration_window_state;
+        renderRegistrationWindowStatus();
+        setTimeout(async () => {
+          try {
+            await refreshAllData();
+          } catch (err) {
+            setStatus(configStatusEl, `${t("status.error_prefix")}: ${err}`, "warn");
+          }
+        }, 3000);
+        return payload;
       }
 
       function updateBreadcrumb() {
@@ -2310,20 +2614,25 @@
       async function checkApiConfig() {
         return withStatus(configStatusEl, async () => {
           const cfg = await requestApi("/api/config", { headers: getHeaders(false) });
-          state.config = cfg || state.config;
+          state.config = { ...state.config, ...(cfg || {}) };
+          const maxMinutes = Number(state.config.registration_window_max_minutes || 60);
+          const defaultMinutes = Number(state.config.registration_window_default_minutes || 10);
+          if (registrationMinutesEl) {
+            registrationMinutesEl.max = String(maxMinutes);
+            if (!registrationMinutesEl.value) {
+              registrationMinutesEl.value = String(defaultMinutes);
+            }
+          }
           renderRestartCapability();
+          renderRegistrationCapability();
+          renderRegistrationWindowStatus();
           return cfg;
         });
       }
 
       async function refreshAllData() {
         return withStatus(configStatusEl, async () => {
-          const cfg = await requestApi("/api/config", { headers: getHeaders(false) });
-          state.config = cfg || state.config;
-          await loadOverview();
-          await loadUserDirectory();
-          renderRestartCapability();
-          return cfg;
+          return await refreshAllDataInternal();
         });
       }
 
@@ -2403,6 +2712,20 @@
           return;
         }
         triggerServiceRestart("stack");
+      });
+
+      document.getElementById("btn-registration-open").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(registrationStatusEl, openRegistrationWindow);
+      });
+
+      document.getElementById("btn-registration-close").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(registrationStatusEl, closeRegistrationWindow);
       });
 
       openSettingsBtnEl.addEventListener("click", () => {
@@ -2574,12 +2897,13 @@
 
       document.getElementById("btn-bot-create").addEventListener("click", () =>
         withStatus(document.getElementById("bot-status"), async () => {
+          const rawBotPassword = document.getElementById("bot-password").value.trim();
           const createResult = await requestApi("/api/bots", {
             method: "POST",
             headers: getHeaders(true),
             body: JSON.stringify({
               username: document.getElementById("bot-username").value.trim(),
-              password: document.getElementById("bot-password").value.trim(),
+              password: rawBotPassword,
               display_name: document.getElementById("bot-display-name").value.trim() || null
             })
           });
@@ -2594,7 +2918,9 @@
                 headers: getHeaders(true),
                 body: JSON.stringify({
                   bot_user_id: userId,
-                  room_id: roomId
+                  room_id: roomId,
+                  bot_password: rawBotPassword || null,
+                  auto_join: true
                 })
               });
               invitedRooms.push(roomId);
@@ -2611,6 +2937,7 @@
         withStatus(document.getElementById("invite-status"), async () => {
           const botUserId = document.getElementById("invite-user-id").value.trim() || inviteBotSelectEl.value.trim();
           const roomId = document.getElementById("invite-room-id").value.trim() || inviteRoomSelectEl.value.trim();
+          const botPassword = (inviteBotPasswordEl?.value || "").trim();
           if (!botUserId || !roomId) {
             throw new Error("bot_user_id and room_id are required.");
           }
@@ -2619,7 +2946,9 @@
             headers: getHeaders(true),
             body: JSON.stringify({
               bot_user_id: botUserId,
-              room_id: roomId
+              room_id: roomId,
+              bot_password: botPassword || null,
+              auto_join: true
             })
           });
           await loadOverview();
