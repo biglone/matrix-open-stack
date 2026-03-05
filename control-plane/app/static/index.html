@@ -894,6 +894,7 @@
             </div>
             <label for="user-create-rooms" data-i18n="users_manage.create_rooms_select">创建后自动邀请到房间（可多选）</label>
             <select id="user-create-rooms" multiple size="5"></select>
+            <p class="hint" data-i18n="common.multiselect_hint">可直接点击多项进行选择/取消，无需按 Ctrl/Command。</p>
             <button id="btn-user-create" data-i18n="users_manage.create_submit">创建普通用户</button>
             <div id="user-create-status" class="status" data-i18n="common.ready">就绪。</div>
             <div id="user-manage-status" class="status" data-i18n="common.ready">就绪。</div>
@@ -919,10 +920,12 @@
             <textarea id="space-invitees" data-i18n-placeholder="ph.space_invitees" placeholder="@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech"></textarea>
             <label for="space-member-select" data-i18n="create_space.member_select">从目录选择邀请成员（可多选）</label>
             <select id="space-member-select" multiple size="6"></select>
+            <p class="hint" data-i18n="common.multiselect_hint">可直接点击多项进行选择/取消，无需按 Ctrl/Command。</p>
             <label for="space-children" data-i18n="create_space.children">子房间 ID（逗号分隔）</label>
             <textarea id="space-children" data-i18n-placeholder="ph.space_children" placeholder="!roomA:matrix.biglone.tech,!roomB:matrix.biglone.tech"></textarea>
             <label for="space-child-select" data-i18n="create_space.child_select">从目录选择子房间（可多选）</label>
             <select id="space-child-select" multiple size="6"></select>
+            <p class="hint" data-i18n="common.multiselect_hint">可直接点击多项进行选择/取消，无需按 Ctrl/Command。</p>
             <button id="btn-space-create" data-i18n="create_space.submit">创建空间</button>
             <div id="space-status" class="status" data-i18n="common.ready">就绪。</div>
           </article>
@@ -954,6 +957,7 @@
             <textarea id="room-invitees" data-i18n-placeholder="ph.room_invitees" placeholder="@alice:matrix.biglone.tech,@devbot:matrix.biglone.tech"></textarea>
             <label for="room-member-select" data-i18n="create_room.member_select">从目录选择邀请成员（可多选）</label>
             <select id="room-member-select" multiple size="6"></select>
+            <p class="hint" data-i18n="common.multiselect_hint">可直接点击多项进行选择/取消，无需按 Ctrl/Command。</p>
             <label for="room-space-id" data-i18n="create_room.parent_space">父空间 Room ID（可选）</label>
             <input id="room-space-id" data-i18n-placeholder="ph.room_space_id" placeholder="!spaceId:matrix.biglone.tech" />
             <label for="room-space-select" data-i18n="create_room.parent_space_select">从目录选择父空间（可选）</label>
@@ -1037,6 +1041,7 @@
             <button id="btn-bot-create" data-i18n="bot_ops.create_submit">通过 API 创建机器人</button>
             <label for="bot-create-rooms" data-i18n="bot_ops.create_rooms_select">创建后自动邀请到房间（可多选）</label>
             <select id="bot-create-rooms" multiple size="5"></select>
+            <p class="hint" data-i18n="common.multiselect_hint">可直接点击多项进行选择/取消，无需按 Ctrl/Command。</p>
             <div id="bot-status" class="status warn" data-i18n="bot_ops.recommend">安全建议：使用 ./scripts/create_bot_secure.sh --username devbot --display-name "Dev Bot"</div>
 
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0" />
@@ -1219,6 +1224,7 @@
           "common.no_data": "暂无数据。",
           "common.yes": "是",
           "common.no": "否",
+          "common.multiselect_hint": "可直接点击多项进行选择/取消，无需按 Ctrl/Command。",
           "common.unnamed": "（未命名）",
           "common.dash": "-",
           "common.ready": "就绪。",
@@ -1418,6 +1424,7 @@
           "common.no_data": "No data.",
           "common.yes": "yes",
           "common.no": "no",
+          "common.multiselect_hint": "Click items directly to select/unselect multiple options, no Ctrl/Command needed.",
           "common.unnamed": "(unnamed)",
           "common.dash": "-",
           "common.ready": "Ready.",
@@ -1760,6 +1767,22 @@
         return Array.from(selectEl?.selectedOptions || [])
           .map((opt) => opt.value.trim())
           .filter(Boolean);
+      }
+
+      function enableClickToggleMultiSelect(selectEl) {
+        if (!selectEl || !selectEl.multiple) {
+          return;
+        }
+        selectEl.addEventListener("mousedown", (event) => {
+          const option = event.target?.closest?.("option");
+          if (!option || option.disabled) {
+            return;
+          }
+          event.preventDefault();
+          option.selected = !option.selected;
+          selectEl.focus();
+          selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+        });
       }
 
       function escapeHtml(value) {
@@ -2671,6 +2694,14 @@
           document.getElementById("invite-room-id").value = inviteRoomSelectEl.value;
         }
       });
+
+      [
+        spaceMemberSelectEl,
+        roomMemberSelectEl,
+        spaceChildSelectEl,
+        botCreateRoomsSelectEl,
+        userCreateRoomsSelectEl
+      ].forEach(enableClickToggleMultiSelect);
 
       document.getElementById("btn-check").addEventListener("click", () => {
         if (!ensureTokenBeforeConfigAction()) {
