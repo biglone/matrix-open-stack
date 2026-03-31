@@ -125,6 +125,8 @@ All endpoints below require `Authorization: Bearer <CONTROL_API_TOKEN>`.
 - `DELETE /api/rooms/{room_id}` (leave + forget from admin view)
 - `POST /api/bots/{user_id}/status` (`active|archived|deleted`, logical status in control-plane)
 - `POST /api/users/{user_id}/status` (`active|archived|deleted`, logical status in control-plane)
+- `POST /api/bots/{user_id}/access-token` (issue a new bot access token via password login; uses cached bot password if request password is empty)
+- `POST /api/users/{user_id}/access-token` (issue a new user access token via password login)
 - `POST /api/ops/restart` (`matrix|control_api|stack`, disabled by default)
 - `GET /api/ops/registration-window`
 - `POST /api/ops/registration-window/open` (temporary user/bot create window, auto-close)

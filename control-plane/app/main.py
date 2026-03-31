@@ -159,6 +159,10 @@ class UserStatusUpdateRequest(BaseModel):
     status: str = Field(..., pattern="^(active|archived|deleted)$")
 
 
+class AccessTokenReissueRequest(BaseModel):
+    password: str | None = Field(default=None, min_length=1, max_length=256)
+
+
 class OpsRestartRequest(BaseModel):
     target: str = Field(..., pattern="^(matrix|control_api|stack)$")
     reason: str | None = Field(default=None, max_length=200)
@@ -843,12 +847,12 @@ async def _login_with_password(user_id: str, password: str) -> str:
     if response.status_code >= 400:
         raise HTTPException(
             status_code=502,
-            detail=f"Bot login failed while auto-joining: {_matrix_error_message(response)}",
+            detail=f"Matrix password login failed: {_matrix_error_message(response)}",
         )
     body = response.json() if response.content else {}
     token = str(body.get("access_token", "")).strip() if isinstance(body, dict) else ""
     if not token:
-        raise HTTPException(status_code=502, detail="Bot login succeeded but no access token was returned.")
+        raise HTTPException(status_code=502, detail="Matrix password login succeeded but no access token was returned.")
     return token
 
 
@@ -2138,6 +2142,113 @@ async def update_user_status(user_id: str, request: UserStatusUpdateRequest) -> 
         "user_id": normalized,
         "status": request.status,
         "note": "Control-plane logical status updated. This does not deactivate Matrix account.",
+    }
+
+
+@app.post("/api/bots/{user_id}/access-token", dependencies=[Depends(_require_control_token)])
+async def reissue_bot_access_token(user_id: str, request: AccessTokenReissueRequest) -> dict[str, Any]:
+    normalized = _normalize_local_user_id(user_id)
+    if not normalized.startswith("@"):
+        raise HTTPException(status_code=400, detail="user_id must start with '@'.")
+    if not _is_local_user(normalized):
+        raise HTTPException(status_code=400, detail="only local users can be updated.")
+
+    supplied_password = (request.password or "").strip()
+    password_source = "request_password" if supplied_password else "cached_password"
+    password = supplied_password or _get_cached_bot_password(normalized)
+    if not password:
+        _audit_log(
+            "bot_access_token_reissue",
+            "blocked",
+            {
+                "user_id": normalized,
+                "reason": "missing_password",
+            },
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Bot password is required. Provide password in request or cache it via bot create/invite flow first.",
+        )
+
+    if supplied_password:
+        _cache_bot_password(normalized, supplied_password)
+
+    try:
+        token = await _login_with_password(normalized, password)
+    except HTTPException as exc:
+        _audit_log(
+            "bot_access_token_reissue",
+            "failed",
+            {
+                "user_id": normalized,
+                "password_source": password_source,
+                "error": str(exc.detail),
+            },
+        )
+        raise
+
+    _cache_bot_access_token(normalized, token)
+    _audit_log(
+        "bot_access_token_reissue",
+        "ok",
+        {
+            "user_id": normalized,
+            "password_source": password_source,
+        },
+    )
+    return {
+        "user_id": normalized,
+        "access_token": token,
+        "password_source": password_source,
+        "token_cached": True,
+        "note": "Issued by password login. Existing sessions/tokens are not revoked by this action.",
+    }
+
+
+@app.post("/api/users/{user_id}/access-token", dependencies=[Depends(_require_control_token)])
+async def reissue_user_access_token(user_id: str, request: AccessTokenReissueRequest) -> dict[str, Any]:
+    normalized = _normalize_local_user_id(user_id)
+    if not normalized.startswith("@"):
+        raise HTTPException(status_code=400, detail="user_id must start with '@'.")
+    if not _is_local_user(normalized):
+        raise HTTPException(status_code=400, detail="only local users can be updated.")
+
+    password = (request.password or "").strip()
+    if not password:
+        _audit_log(
+            "user_access_token_reissue",
+            "blocked",
+            {
+                "user_id": normalized,
+                "reason": "missing_password",
+            },
+        )
+        raise HTTPException(status_code=400, detail="Password is required to issue a new access token for this user.")
+
+    try:
+        token = await _login_with_password(normalized, password)
+    except HTTPException as exc:
+        _audit_log(
+            "user_access_token_reissue",
+            "failed",
+            {
+                "user_id": normalized,
+                "error": str(exc.detail),
+            },
+        )
+        raise
+
+    _audit_log(
+        "user_access_token_reissue",
+        "ok",
+        {
+            "user_id": normalized,
+        },
+    )
+    return {
+        "user_id": normalized,
+        "access_token": token,
+        "note": "Issued by password login. Existing sessions/tokens are not revoked by this action.",
     }
 
 

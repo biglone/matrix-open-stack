@@ -1389,10 +1389,15 @@
           "common.no_options": "暂无可选项",
           "common.bot_tag": "机器人",
           "common.user_tag": "用户",
+          "action.reissue_token": "重建 Token",
           "action.archive": "归档",
           "action.remove": "移除",
           "action.delete": "删除",
           "action.restore": "恢复",
+          "token_refresh.user_password_prompt": "请输入 {user_id} 的密码以签发新 access token（取消则终止）。",
+          "token_refresh.bot_password_prompt": "可输入 {user_id} 的密码；留空则尝试使用缓存密码（取消则终止）。",
+          "token_refresh.password_required": "必须提供密码。",
+          "token_refresh.cancelled": "已取消。",
           "pager.info": "第 {page}/{total} 页（{count}）",
           "status.processing": "处理中...",
           "status.error_prefix": "错误",
@@ -1633,10 +1638,15 @@
           "common.no_options": "No options available",
           "common.bot_tag": "bot",
           "common.user_tag": "user",
+          "action.reissue_token": "Reissue Token",
           "action.archive": "Archive",
           "action.remove": "Remove",
           "action.delete": "Delete",
           "action.restore": "Restore",
+          "token_refresh.user_password_prompt": "Enter password for {user_id} to issue a new access token (cancel to abort).",
+          "token_refresh.bot_password_prompt": "Enter password for {user_id}, or leave blank to use cached password (cancel to abort).",
+          "token_refresh.password_required": "Password is required.",
+          "token_refresh.cancelled": "Cancelled.",
           "pager.info": "Page {page}/{total} ({count})",
           "status.processing": "Processing...",
           "status.error_prefix": "ERROR",
@@ -2451,6 +2461,7 @@
               <td>${escapeHtml(sources)}</td>
               <td>
                 <div class="table-actions">
+                  <button class="secondary" onclick="reissueBotToken('${encoded}')">${escapeHtml(t("action.reissue_token"))}</button>
                   <button class="warn" onclick="setBotStatus('${encoded}','archived')">${escapeHtml(t("action.archive"))}</button>
                   <button class="danger" onclick="setBotStatus('${encoded}','deleted')">${escapeHtml(t("action.delete"))}</button>
                   <button class="ghost" onclick="setBotStatus('${encoded}','active')">${escapeHtml(t("action.restore"))}</button>
@@ -2479,6 +2490,7 @@
               <td>${escapeHtml(row.status || "active")}</td>
               <td>
                 <div class="table-actions">
+                  <button class="secondary" onclick="reissueUserToken('${encoded}')">${escapeHtml(t("action.reissue_token"))}</button>
                   <button class="warn" onclick="setUserStatus('${encoded}','archived')">${escapeHtml(t("action.archive"))}</button>
                   <button class="danger" onclick="setUserStatus('${encoded}','deleted')">${escapeHtml(t("action.delete"))}</button>
                   <button class="ghost" onclick="setUserStatus('${encoded}','active')">${escapeHtml(t("action.restore"))}</button>
@@ -2794,6 +2806,23 @@
         });
       }
 
+      async function reissueBotAccessTokenApi(userId) {
+        return withStatus(document.getElementById("bot-status"), async () => {
+          const input = window.prompt(t("token_refresh.bot_password_prompt", { user_id: userId }), "");
+          if (input === null) {
+            return { skipped: true, note: t("token_refresh.cancelled") };
+          }
+          const password = input.trim();
+          return await requestApi(`/api/bots/${encodeURIComponent(userId)}/access-token`, {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({
+              password: password || null
+            })
+          });
+        });
+      }
+
       async function setUserStatusApi(userId, status) {
         return withStatus(document.getElementById("user-manage-status"), async () => {
           const payload = await requestApi(`/api/users/${encodeURIComponent(userId)}/status`, {
@@ -2803,6 +2832,26 @@
           });
           await loadUserDirectory();
           return payload;
+        });
+      }
+
+      async function reissueUserAccessTokenApi(userId) {
+        return withStatus(document.getElementById("user-manage-status"), async () => {
+          const input = window.prompt(t("token_refresh.user_password_prompt", { user_id: userId }), "");
+          if (input === null) {
+            return { skipped: true, note: t("token_refresh.cancelled") };
+          }
+          const password = input.trim();
+          if (!password) {
+            throw new Error(t("token_refresh.password_required"));
+          }
+          return await requestApi(`/api/users/${encodeURIComponent(userId)}/access-token`, {
+            method: "POST",
+            headers: getHeaders(true),
+            body: JSON.stringify({
+              password
+            })
+          });
         });
       }
 
@@ -3041,6 +3090,8 @@
       window.removeRoom = (encodedRoomId) => deleteResource(`/api/rooms/${encodedRoomId}`, configStatusEl);
       window.setBotStatus = (encodedUserId, status) => setBotStatusApi(decodeURIComponent(encodedUserId), status);
       window.setUserStatus = (encodedUserId, status) => setUserStatusApi(decodeURIComponent(encodedUserId), status);
+      window.reissueBotToken = (encodedUserId) => reissueBotAccessTokenApi(decodeURIComponent(encodedUserId));
+      window.reissueUserToken = (encodedUserId) => reissueUserAccessTokenApi(decodeURIComponent(encodedUserId));
 
       async function checkApiConfig() {
         return withStatus(configStatusEl, async () => {
