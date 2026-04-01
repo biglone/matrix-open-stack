@@ -1,6 +1,8 @@
 import asyncio
 import os
+import re
 import secrets
+import shlex
 import string
 import hashlib
 import json
@@ -82,6 +84,8 @@ _registration_lock = threading.Lock()
 _registration_timer: threading.Timer | None = None
 _overview_cache_lock = threading.Lock()
 _overview_cache: dict[str, Any] | None = None
+_matrix_admin_maintenance_lock = threading.Lock()
+_full_users_snapshot_lock = threading.Lock()
 _registration_state: dict[str, Any] = {
     "active": False,
     "opened_at": "",
@@ -451,9 +455,10 @@ def _docker_api_request(
     *,
     params: dict[str, Any] | None = None,
     json_body: dict[str, Any] | None = None,
+    request_timeout_seconds: float = 10.0,
 ) -> httpx.Response:
     transport = httpx.HTTPTransport(uds=settings.docker_socket_path)
-    with httpx.Client(base_url="http://docker", transport=transport, timeout=10.0) as client:
+    with httpx.Client(base_url="http://docker", transport=transport, timeout=request_timeout_seconds) as client:
         return client.request(method, path, params=params, json=json_body)
 
 
@@ -774,6 +779,399 @@ def _restart_containers_via_docker(container_names: list[str], timeout_seconds: 
 
         results.append({"container": name, "status": "restarted"})
     return results
+
+
+def _inspect_container_via_docker(container_name: str) -> dict[str, Any]:
+    encoded = quote(container_name, safe="")
+    inspect_response = _docker_api_request("GET", f"/containers/{encoded}/json")
+    if inspect_response.status_code == 404:
+        raise RuntimeError(f"Container not found: {container_name}")
+    if inspect_response.status_code >= 400:
+        raise RuntimeError(
+            f"Failed to inspect container {container_name}: "
+            f"HTTP {inspect_response.status_code} {_docker_error_message(inspect_response)}"
+        )
+    payload = inspect_response.json() if inspect_response.content else {}
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"Inspect container {container_name} returned unexpected payload.")
+    return payload
+
+
+def _container_running_state(container_name: str) -> bool:
+    payload = _inspect_container_via_docker(container_name)
+    state = payload.get("State", {})
+    if not isinstance(state, dict):
+        return False
+    return bool(state.get("Running", False))
+
+
+def _stop_container_via_docker(container_name: str, timeout_seconds: int) -> None:
+    encoded = quote(container_name, safe="")
+    stop_response = _docker_api_request(
+        "POST",
+        f"/containers/{encoded}/stop",
+        params={"t": str(timeout_seconds)},
+    )
+    if stop_response.status_code in {204, 304}:
+        return
+    if stop_response.status_code == 404:
+        raise RuntimeError(f"Container not found: {container_name}")
+    if stop_response.status_code >= 400:
+        raise RuntimeError(
+            f"Failed to stop container {container_name}: "
+            f"HTTP {stop_response.status_code} {_docker_error_message(stop_response)}"
+        )
+
+
+def _start_container_via_docker(container_name: str) -> None:
+    encoded = quote(container_name, safe="")
+    start_response = _docker_api_request("POST", f"/containers/{encoded}/start")
+    if start_response.status_code in {204, 304}:
+        return
+    if start_response.status_code == 404:
+        raise RuntimeError(f"Container not found: {container_name}")
+    if start_response.status_code >= 400:
+        raise RuntimeError(
+            f"Failed to start container {container_name}: "
+            f"HTTP {start_response.status_code} {_docker_error_message(start_response)}"
+        )
+
+
+def _wait_container_healthy_via_docker(container_name: str, timeout_seconds: int) -> None:
+    deadline = time.time() + max(5, timeout_seconds)
+    last_state = "unknown"
+    while time.time() < deadline:
+        payload = _inspect_container_via_docker(container_name)
+        state = payload.get("State", {})
+        if not isinstance(state, dict):
+            time.sleep(1)
+            continue
+        running = bool(state.get("Running", False))
+        health_payload = state.get("Health")
+        health_status = ""
+        if isinstance(health_payload, dict):
+            health_status = str(health_payload.get("Status", "")).strip().lower()
+        if running and (not health_status or health_status == "healthy"):
+            return
+        last_state = health_status or ("running" if running else "stopped")
+        time.sleep(1)
+    raise RuntimeError(f"Container {container_name} did not become healthy in time (last_state={last_state}).")
+
+
+def _matrix_container_name() -> str:
+    return _restart_target_containers("matrix")[0]
+
+
+def _container_binds_from_inspect(payload: dict[str, Any]) -> list[str]:
+    mounts = payload.get("Mounts", [])
+    if not isinstance(mounts, list):
+        return []
+    binds: list[str] = []
+    for mount in mounts:
+        if not isinstance(mount, dict):
+            continue
+        mount_type = str(mount.get("Type", "")).strip().lower()
+        if mount_type not in {"bind", "volume"}:
+            continue
+        source = str(mount.get("Source", "")).strip()
+        destination = str(mount.get("Destination", "")).strip()
+        if not source or not destination:
+            continue
+        rw = bool(mount.get("RW", True))
+        suffix = "" if rw else ":ro"
+        binds.append(f"{source}:{destination}{suffix}")
+    return binds
+
+
+def _strip_ansi_control(raw: str) -> str:
+    ansi_pattern = re.compile(r"\x1B\[[0-9;]*[A-Za-z]")
+    return ansi_pattern.sub("", raw.replace("\r", "\n"))
+
+
+def _run_matrix_admin_command_once(command: str, timeout_seconds: int = 35) -> str:
+    matrix_name = _matrix_container_name()
+    inspect_payload = _inspect_container_via_docker(matrix_name)
+    config_payload = inspect_payload.get("Config", {})
+    if not isinstance(config_payload, dict):
+        config_payload = {}
+    image = str(config_payload.get("Image", "")).strip()
+    if not image:
+        raise RuntimeError(f"Cannot determine image for container {matrix_name}.")
+
+    binds = _container_binds_from_inspect(inspect_payload)
+    if not binds:
+        raise RuntimeError(
+            f"Cannot determine bind mounts from container {matrix_name}; cannot run admin command safely."
+        )
+
+    matrix_user = str(config_payload.get("User", "")).strip()
+    safe_timeout = max(5, int(timeout_seconds))
+    safe_admin_command = shlex.quote(command)
+    shell_command = (
+        f"timeout -s TERM {safe_timeout} "
+        f"/usr/local/bin/conduwuit --config /etc/conduwuit/conduwuit.toml --execute {safe_admin_command}"
+    )
+
+    create_payload: dict[str, Any] = {
+        "Image": image,
+        "Entrypoint": ["/bin/sh", "-lc"],
+        "Cmd": [shell_command],
+        "Tty": True,
+        "HostConfig": {
+            "AutoRemove": False,
+            "Binds": binds,
+        },
+    }
+    if matrix_user:
+        create_payload["User"] = matrix_user
+
+    create_response = _docker_api_request("POST", "/containers/create", json_body=create_payload)
+    if create_response.status_code >= 400:
+        raise RuntimeError(
+            f"Failed to create matrix admin runner: "
+            f"HTTP {create_response.status_code} {_docker_error_message(create_response)}"
+        )
+    container_id = str(create_response.json().get("Id", "")).strip()
+    if not container_id:
+        raise RuntimeError("Matrix admin runner creation returned empty container ID.")
+
+    encoded_id = quote(container_id, safe="")
+    try:
+        start_response = _docker_api_request("POST", f"/containers/{encoded_id}/start")
+        if start_response.status_code >= 400:
+            raise RuntimeError(
+                f"Failed to start matrix admin runner {container_id}: "
+                f"HTTP {start_response.status_code} {_docker_error_message(start_response)}"
+            )
+
+        wait_response = _docker_api_request(
+            "POST",
+            f"/containers/{encoded_id}/wait",
+            request_timeout_seconds=float(safe_timeout + 30),
+        )
+        if wait_response.status_code >= 400:
+            raise RuntimeError(
+                f"Failed waiting matrix admin runner {container_id}: "
+                f"HTTP {wait_response.status_code} {_docker_error_message(wait_response)}"
+            )
+
+        logs_response = _docker_api_request(
+            "GET",
+            f"/containers/{encoded_id}/logs",
+            params={"stdout": "1", "stderr": "1", "tail": "400"},
+        )
+        if logs_response.status_code >= 400:
+            raise RuntimeError(
+                f"Failed reading matrix admin runner logs {container_id}: "
+                f"HTTP {logs_response.status_code} {_docker_error_message(logs_response)}"
+            )
+        logs_text = logs_response.text
+
+        wait_payload = wait_response.json() if wait_response.content else {}
+        exit_code = int(wait_payload.get("StatusCode", 1))
+        normalized_logs = _strip_ansi_control(logs_text)
+        if exit_code not in {0, 124, 137, 143} and not normalized_logs.strip():
+            raise RuntimeError(f"Matrix admin runner failed with exit code {exit_code}.")
+        return normalized_logs
+    finally:
+        try:
+            _docker_api_request("DELETE", f"/containers/{encoded_id}", params={"force": "1"})
+        except Exception:
+            pass
+
+
+def _extract_users_from_list_output(raw_output: str) -> set[str]:
+    users: set[str] = set()
+    for line in raw_output.splitlines():
+        candidate = line.strip().strip("`")
+        if re.fullmatch(r"@[^\s:]+:[^\s:]+", candidate):
+            users.add(candidate)
+    return users
+
+
+def _parse_reset_password_output(raw_output: str) -> tuple[str, str] | None:
+    compact = " ".join(raw_output.replace("`", " ").split())
+    matched = re.search(
+        r"Successfully reset the password for user\s+(@[^\s:]+:[^\s:]+)\s*:\s*([^\s]+)",
+        compact,
+    )
+    if not matched:
+        return None
+    return matched.group(1), matched.group(2)
+
+
+def _reset_local_user_password_with_restart(normalized_user_id: str) -> dict[str, Any]:
+    started_at = time.monotonic()
+    matrix_container = _matrix_container_name()
+    was_running = _container_running_state(matrix_container)
+    operation_error: Exception | None = None
+    restore_error: Exception | None = None
+    result: dict[str, Any] | None = None
+
+    try:
+        if was_running:
+            _stop_container_via_docker(matrix_container, settings.restart_timeout_seconds)
+
+        list_output = _run_matrix_admin_command_once("users list-users", timeout_seconds=45)
+        local_users = _extract_users_from_list_output(list_output)
+        if not local_users:
+            raise HTTPException(
+                status_code=502,
+                detail="Failed to parse users list from Conduwuit admin output.",
+            )
+        if normalized_user_id not in local_users:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User not found in local users list: {normalized_user_id}.",
+            )
+
+        localpart = _extract_localpart(normalized_user_id)
+        if not localpart:
+            raise HTTPException(status_code=400, detail=f"Invalid local user_id: {normalized_user_id}")
+
+        reset_output = _run_matrix_admin_command_once(f"users reset-password {localpart}", timeout_seconds=45)
+        parsed = _parse_reset_password_output(reset_output)
+        if parsed is None:
+            raise HTTPException(
+                status_code=502,
+                detail="Failed to parse reset-password output from Conduwuit admin command.",
+            )
+
+        reset_user_id, new_password = parsed
+        normalized_reset_user_id = _normalize_local_user_id(reset_user_id)
+        if normalized_reset_user_id != normalized_user_id:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Reset command returned unexpected user_id: {reset_user_id}",
+            )
+
+        result = {
+            "user_id": normalized_user_id,
+            "new_password": new_password,
+            "matrix_restarted": was_running,
+        }
+    except Exception as exc:
+        operation_error = exc
+    finally:
+        if was_running:
+            try:
+                _start_container_via_docker(matrix_container)
+                _wait_container_healthy_via_docker(
+                    matrix_container,
+                    timeout_seconds=max(20, settings.restart_timeout_seconds * 3),
+                )
+            except Exception as exc:
+                restore_error = exc
+
+    if operation_error is not None:
+        if restore_error is not None:
+            if isinstance(operation_error, HTTPException):
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"{operation_error.detail}; failed to restore matrix service: {restore_error}",
+                )
+            raise HTTPException(
+                status_code=502,
+                detail=f"{operation_error}; failed to restore matrix service: {restore_error}",
+            )
+        if isinstance(operation_error, HTTPException):
+            raise operation_error
+        raise HTTPException(status_code=502, detail=f"Password reset failed: {operation_error}")
+
+    if restore_error is not None:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Password reset completed but failed to restore matrix service: {restore_error}",
+        )
+
+    if result is None:
+        raise HTTPException(status_code=500, detail="Password reset result is empty.")
+    result["maintenance_seconds"] = round(max(0.0, time.monotonic() - started_at), 1)
+    return result
+
+
+def _refresh_full_users_snapshot_with_restart() -> dict[str, Any]:
+    matrix_container = _matrix_container_name()
+    was_running = _container_running_state(matrix_container)
+    operation_error: Exception | None = None
+    restore_error: Exception | None = None
+    result: dict[str, Any] | None = None
+
+    try:
+        if was_running:
+            _stop_container_via_docker(matrix_container, settings.restart_timeout_seconds)
+
+        list_output = _run_matrix_admin_command_once("users list-users", timeout_seconds=45)
+        user_ids = sorted(_extract_users_from_list_output(list_output))
+        if not user_ids:
+            raise HTTPException(
+                status_code=502,
+                detail="Failed to parse users list from Conduwuit admin output.",
+            )
+
+        users = [
+            {
+                "user_id": user_id,
+                "username": _extract_localpart(user_id),
+                "is_bot": _is_probable_bot_user(user_id),
+            }
+            for user_id in user_ids
+        ]
+        snapshot = {
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "source": "conduwuit admin users list-users (control-plane refresh)",
+            "server_name": settings.matrix_server_name,
+            "users": users,
+        }
+        with _full_users_snapshot_lock:
+            _write_full_users_snapshot(snapshot)
+
+        bot_count = sum(1 for item in users if bool(item.get("is_bot", False)))
+        result = {
+            "count": len(users),
+            "bot_count": bot_count,
+            "user_count": len(users) - bot_count,
+            "generated_at": snapshot["generated_at"],
+            "snapshot_path": settings.full_users_snapshot_path,
+            "matrix_restarted": was_running,
+        }
+    except Exception as exc:
+        operation_error = exc
+    finally:
+        if was_running:
+            try:
+                _start_container_via_docker(matrix_container)
+                _wait_container_healthy_via_docker(
+                    matrix_container,
+                    timeout_seconds=max(20, settings.restart_timeout_seconds * 3),
+                )
+            except Exception as exc:
+                restore_error = exc
+
+    if operation_error is not None:
+        if restore_error is not None:
+            if isinstance(operation_error, HTTPException):
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"{operation_error.detail}; failed to restore matrix service: {restore_error}",
+                )
+            raise HTTPException(
+                status_code=502,
+                detail=f"{operation_error}; failed to restore matrix service: {restore_error}",
+            )
+        if isinstance(operation_error, HTTPException):
+            raise operation_error
+        raise HTTPException(status_code=502, detail=f"Snapshot refresh failed: {operation_error}")
+
+    if restore_error is not None:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Snapshot refresh completed but failed to restore matrix service: {restore_error}",
+        )
+
+    if result is None:
+        raise HTTPException(status_code=500, detail="Snapshot refresh result is empty.")
+    return result
 
 
 def _restart_containers_task(target: str, container_names: list[str], reason: str, client_ip: str) -> None:
@@ -1355,6 +1753,68 @@ def _load_full_users_snapshot() -> dict[str, Any] | None:
     return payload
 
 
+def _write_full_users_snapshot(snapshot: dict[str, Any]) -> None:
+    path = Path(settings.full_users_snapshot_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(snapshot, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
+    try:
+        os.chmod(path, 0o600)
+    except Exception:
+        pass
+
+
+def _upsert_full_users_snapshot_user(user_id: str, *, is_bot: bool) -> bool:
+    normalized_user_id = _normalize_local_user_id(user_id)
+    if not normalized_user_id or not _is_local_user(normalized_user_id):
+        return False
+
+    with _full_users_snapshot_lock:
+        snapshot = _load_full_users_snapshot()
+        if snapshot is None:
+            snapshot = {
+                "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "source": "control-plane incremental sync",
+                "server_name": settings.matrix_server_name,
+                "users": [],
+            }
+        users = snapshot.get("users", [])
+        if not isinstance(users, list):
+            users = []
+
+        username = _extract_localpart(normalized_user_id)
+        updated = False
+        for item in users:
+            if not isinstance(item, dict):
+                continue
+            existing_user_id = _normalize_local_user_id(str(item.get("user_id", "") or ""))
+            if existing_user_id != normalized_user_id:
+                continue
+            item["user_id"] = normalized_user_id
+            item["username"] = username
+            item["is_bot"] = is_bot
+            updated = True
+            break
+
+        if not updated:
+            users.append(
+                {
+                    "user_id": normalized_user_id,
+                    "username": username,
+                    "is_bot": is_bot,
+                }
+            )
+
+        users.sort(key=lambda item: ((str(item.get("username", "") or "")).lower(), str(item.get("user_id", "") or "")))
+        snapshot["users"] = users
+        snapshot["generated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if not str(snapshot.get("source", "")).strip():
+            snapshot["source"] = "control-plane incremental sync"
+        if not str(snapshot.get("server_name", "")).strip():
+            snapshot["server_name"] = settings.matrix_server_name
+        _write_full_users_snapshot(snapshot)
+    return True
+
+
 def _list_managed_users(include_bots: bool = False, include_deleted: bool = False) -> list[dict[str, Any]]:
     snapshot = _load_full_users_snapshot()
     if snapshot is None:
@@ -1575,6 +2035,7 @@ async def api_config() -> dict[str, Any]:
         "restart_api_mode": settings.restart_api_mode,
         "compose_project_name": settings.compose_project_name,
         "restart_targets": ["matrix", "control_api", "stack"],
+        "full_users_snapshot_refresh_available": settings.restart_api_mode == "docker_socket",
         "registration_window_api_mode": settings.registration_window_api_mode,
         "registration_window_default_minutes": settings.registration_window_default_minutes,
         "registration_window_max_minutes": settings.registration_window_max_minutes,
@@ -1688,6 +2149,49 @@ async def api_registration_window_close(
         "mode": settings.registration_window_api_mode,
         "state": result,
     }
+
+
+@app.post("/api/ops/full-users-snapshot/refresh", dependencies=[Depends(_require_control_token)])
+async def api_refresh_full_users_snapshot(http_request: Request) -> dict[str, Any]:
+    _ensure_restart_runtime_ready()
+    client_ip = http_request.headers.get("cf-connecting-ip") or (http_request.client.host if http_request.client else "unknown")
+    with _matrix_admin_maintenance_lock:
+        _audit_log("full_users_snapshot_refresh", "start", {"client_ip": client_ip})
+        try:
+            result = _refresh_full_users_snapshot_with_restart()
+        except HTTPException as exc:
+            _audit_log(
+                "full_users_snapshot_refresh",
+                "failed",
+                {"client_ip": client_ip, "error": str(exc.detail)},
+            )
+            raise
+        except Exception as exc:
+            _audit_log(
+                "full_users_snapshot_refresh",
+                "failed",
+                {"client_ip": client_ip, "error": str(exc)},
+            )
+            raise
+
+        _audit_log(
+            "full_users_snapshot_refresh",
+            "ok",
+            {
+                "client_ip": client_ip,
+                "count": int(result.get("count", 0)),
+                "bot_count": int(result.get("bot_count", 0)),
+                "user_count": int(result.get("user_count", 0)),
+                "generated_at": str(result.get("generated_at", "")),
+                "snapshot_path": str(result.get("snapshot_path", "")),
+                "matrix_restarted": bool(result.get("matrix_restarted", False)),
+            },
+        )
+        return {
+            "refreshed": True,
+            **result,
+            "note": "Full users snapshot refreshed from Conduwuit admin users list.",
+        }
 
 
 @app.get("/api/rooms", dependencies=[Depends(_require_control_token)])
@@ -2252,6 +2756,52 @@ async def reissue_user_access_token(user_id: str, request: AccessTokenReissueReq
     }
 
 
+@app.post("/api/users/{user_id}/password/reset", dependencies=[Depends(_require_control_token)])
+async def reset_user_password(user_id: str, http_request: Request) -> dict[str, Any]:
+    normalized = _normalize_local_user_id(user_id)
+    if not normalized.startswith("@"):
+        raise HTTPException(status_code=400, detail="user_id must start with '@'.")
+    if not _is_local_user(normalized):
+        raise HTTPException(status_code=400, detail="only local users can be updated.")
+
+    _ensure_restart_runtime_ready()
+    client_ip = http_request.headers.get("cf-connecting-ip") or (http_request.client.host if http_request.client else "unknown")
+
+    with _matrix_admin_maintenance_lock:
+        _audit_log("user_password_reset", "start", {"user_id": normalized, "client_ip": client_ip})
+        try:
+            result = _reset_local_user_password_with_restart(normalized)
+        except HTTPException as exc:
+            _audit_log(
+                "user_password_reset",
+                "failed",
+                {"user_id": normalized, "client_ip": client_ip, "error": str(exc.detail)},
+            )
+            raise
+        except Exception as exc:
+            _audit_log(
+                "user_password_reset",
+                "failed",
+                {"user_id": normalized, "client_ip": client_ip, "error": str(exc)},
+            )
+            raise
+
+        _audit_log(
+            "user_password_reset",
+            "ok",
+            {
+                "user_id": normalized,
+                "client_ip": client_ip,
+                "matrix_restarted": bool(result.get("matrix_restarted", False)),
+            },
+        )
+        if bool(result.get("matrix_restarted", False)):
+            result["note"] = "Password reset completed via Conduwuit admin command with Matrix maintenance restart."
+        else:
+            result["note"] = "Password reset completed via Conduwuit admin command."
+        return result
+
+
 @app.post("/api/users", dependencies=[Depends(_require_control_token)])
 async def create_user(request: UserCreateRequest) -> dict[str, Any]:
     if settings.user_create_mode != "legacy_register" and not _registration_window_allows("users"):
@@ -2272,7 +2822,9 @@ async def create_user(request: UserCreateRequest) -> dict[str, Any]:
             ),
         )
 
-    password = request.password or _generate_password()
+    supplied_password = request.password or ""
+    password_source = "request_password" if supplied_password else "auto_generated"
+    password = supplied_password or _generate_password()
     payload: dict[str, Any] = {
         "username": request.username,
         "password": password,
@@ -2302,9 +2854,27 @@ async def create_user(request: UserCreateRequest) -> dict[str, Any]:
         user_state.pop(user_id, None)
         _save_user_state(user_state)
 
-    response: dict[str, Any] = {"user_id": user_id}
+    snapshot_synced = False
+    if user_id:
+        try:
+            snapshot_synced = _upsert_full_users_snapshot_user(user_id, is_bot=False)
+        except Exception as exc:
+            _audit_log(
+                "user_create_api",
+                "snapshot_sync_failed",
+                {
+                    "username": request.username,
+                    "user_id": user_id,
+                    "error": str(exc),
+                },
+            )
+
+    response: dict[str, Any] = {"user_id": user_id, "password_source": password_source}
     if settings.expose_user_access_token and access_token:
         response["access_token"] = access_token
+    response["snapshot_synced"] = snapshot_synced
+    if password_source == "auto_generated":
+        response["generated_password"] = password
 
     _audit_log(
         "user_create_api",
@@ -2313,6 +2883,8 @@ async def create_user(request: UserCreateRequest) -> dict[str, Any]:
             "username": request.username,
             "user_id": user_id,
             "mode": "legacy_register",
+            "snapshot_synced": snapshot_synced,
+            "password_source": password_source,
         },
     )
     return response
@@ -2363,9 +2935,25 @@ async def create_bot(request: BotCreateRequest) -> dict[str, Any]:
             token=access_token,
         )
 
+    snapshot_synced = False
+    if user_id:
+        try:
+            snapshot_synced = _upsert_full_users_snapshot_user(user_id, is_bot=True)
+        except Exception as exc:
+            _audit_log(
+                "bot_create_api",
+                "snapshot_sync_failed",
+                {
+                    "username": request.username,
+                    "user_id": user_id,
+                    "error": str(exc),
+                },
+            )
+
     response: dict[str, Any] = {"user_id": user_id}
     if settings.expose_bot_access_token and access_token:
         response["access_token"] = access_token
+    response["snapshot_synced"] = snapshot_synced
     _audit_log(
         "bot_create_api",
         "ok",
@@ -2373,6 +2961,7 @@ async def create_bot(request: BotCreateRequest) -> dict[str, Any]:
             "username": request.username,
             "user_id": user_id,
             "mode": "legacy_register",
+            "snapshot_synced": snapshot_synced,
         },
     )
     return response

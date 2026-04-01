@@ -709,7 +709,9 @@
             <div class="row">
               <button class="secondary" data-view-target="inventory" data-i18n="dashboard.goto_resources">前往资源页面</button>
               <button class="ghost" data-view-target="full-users" data-i18n="dashboard.goto_full_users">查看全量用户</button>
+              <button id="btn-dashboard-snapshot-refresh" class="ghost" data-i18n="dashboard.refresh_snapshot">刷新全量快照</button>
             </div>
+            <div id="dashboard-snapshot-status" class="status" data-i18n="common.ready">就绪。</div>
           </article>
         </section>
 
@@ -1103,6 +1105,18 @@
 
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0" />
 
+            <h3 data-i18n="service_ops.snapshot_title">全量用户快照</h3>
+            <p class="hint" data-i18n="service_ops.snapshot_hint">一键刷新全量用户/机器人快照，刷新后用户列表会立即同步。</p>
+            <div id="snapshot-refresh-capability" class="status warn" data-i18n="service_ops.snapshot_capability.disabled">
+              快照刷新未启用：请设置 RESTART_API_MODE=docker_socket
+            </div>
+            <div class="row">
+              <button id="btn-snapshot-refresh" class="secondary" data-i18n="service_ops.snapshot_refresh">刷新全量用户快照</button>
+            </div>
+            <div id="snapshot-refresh-status" class="status" data-i18n="common.ready">就绪。</div>
+
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0" />
+
             <h3 data-i18n="service_ops.regwin_title">临时创建窗口</h3>
             <p class="hint" data-i18n="service_ops.regwin_hint">
               一键临时开放用户/机器人创建，自动回关恢复安全模式。
@@ -1235,6 +1249,7 @@
           "dashboard.tips_hint": "左侧菜单用于切换模块。资源列表已合并到单页标签里，操作更高效。",
           "dashboard.goto_resources": "前往资源页面",
           "dashboard.goto_full_users": "查看全量用户",
+          "dashboard.refresh_snapshot": "刷新全量快照",
           "inventory.title": "资源管理",
           "inventory.hint": "在同一页面切换空间、房间、机器人，减少页面跳转。",
           "inventory.tab.spaces": "空间",
@@ -1279,6 +1294,9 @@
           "users_manage.create_display_name": "显示名（可选）",
           "users_manage.create_rooms_select": "创建后自动邀请到房间（可多选）",
           "users_manage.create_submit": "创建普通用户",
+          "users_manage.blank_password_confirm": "你未填写密码，将自动生成随机密码。确认继续吗？",
+          "users_manage.blank_password_cancelled": "已取消创建，请先填写密码后重试。",
+          "users_manage.generated_password_prompt": "{user_id} 使用的是自动生成密码，请立即安全保存：",
           "create_space.title": "创建空间",
           "create_space.name": "名称",
           "create_space.topic": "主题",
@@ -1362,6 +1380,12 @@
           "service_ops.capability.error": "重启 API 检查失败：{error}",
           "service_ops.confirm": "确认执行“{target}”吗？",
           "service_ops.reconnect_note": "已下发重启任务。若管理页短暂断连，请等待 3-8 秒后刷新。",
+          "service_ops.snapshot_title": "全量用户快照",
+          "service_ops.snapshot_hint": "一键刷新全量用户/机器人快照，刷新后用户列表会立即同步。",
+          "service_ops.snapshot_refresh": "刷新全量用户快照",
+          "service_ops.snapshot_capability.disabled": "快照刷新未启用：请设置 RESTART_API_MODE=docker_socket",
+          "service_ops.snapshot_capability.enabled": "快照刷新可用（路径：{path}）。",
+          "service_ops.snapshot_confirm": "确认刷新全量用户快照吗？该操作会短暂重启 Matrix 服务。",
           "service_ops.regwin_title": "临时创建窗口",
           "service_ops.regwin_hint": "在管理页临时开放用户/机器人创建能力，到时自动回关。",
           "service_ops.regwin_minutes": "开放分钟数",
@@ -1390,6 +1414,7 @@
           "common.bot_tag": "机器人",
           "common.user_tag": "用户",
           "action.reissue_token": "重建 Token",
+          "action.reset_password": "重置密码",
           "action.archive": "归档",
           "action.remove": "移除",
           "action.delete": "删除",
@@ -1398,6 +1423,15 @@
           "token_refresh.bot_password_prompt": "可输入 {user_id} 的密码；留空则尝试使用缓存密码（取消则终止）。",
           "token_refresh.password_required": "必须提供密码。",
           "token_refresh.cancelled": "已取消。",
+          "password_reset.user_confirm": "确认重置 {user_id} 的密码吗？该操作会短暂重启 Matrix 服务。",
+          "password_reset.processing": "正在重置 {user_id} 密码，并短暂重启 Matrix...",
+          "password_reset.waiting": "重置进行中（已等待 {seconds}s），请勿重复点击。",
+          "password_reset.recovering": "服务恢复中... 重试 {attempt}/{max}",
+          "password_reset.recovered": "服务恢复完成，正在刷新页面数据...",
+          "password_reset.done": "密码重置完成（耗时约 {seconds}s）。",
+          "password_reset.copied": "新密码已自动复制到剪贴板。",
+          "password_reset.copy_manual": "浏览器禁止自动复制，请在弹窗中手动复制新密码。",
+          "password_reset.result_prompt": "{user_id} 的新密码如下，请立即安全保存：",
           "pager.info": "第 {page}/{total} 页（{count}）",
           "status.processing": "处理中...",
           "status.error_prefix": "错误",
@@ -1484,6 +1518,7 @@
           "dashboard.tips_hint": "Use the left menu to switch modules. Resource tables are merged into one tabbed section.",
           "dashboard.goto_resources": "Go to Resources",
           "dashboard.goto_full_users": "Open Full Users",
+          "dashboard.refresh_snapshot": "Refresh Full Snapshot",
           "inventory.title": "Resource Management",
           "inventory.hint": "Switch spaces, rooms, and bots in one page to reduce navigation overhead.",
           "inventory.tab.spaces": "Spaces",
@@ -1528,6 +1563,9 @@
           "users_manage.create_display_name": "Display Name (optional)",
           "users_manage.create_rooms_select": "Auto-invite to rooms after creation (multi-select)",
           "users_manage.create_submit": "Create User",
+          "users_manage.blank_password_confirm": "Password is blank. A random password will be generated. Continue?",
+          "users_manage.blank_password_cancelled": "Create cancelled. Enter a password and try again.",
+          "users_manage.generated_password_prompt": "{user_id} used an auto-generated password. Save it securely now:",
           "create_space.title": "Create Space",
           "create_space.name": "Name",
           "create_space.topic": "Topic",
@@ -1611,6 +1649,12 @@
           "service_ops.capability.error": "Restart API check failed: {error}",
           "service_ops.confirm": "Confirm to run \"{target}\"?",
           "service_ops.reconnect_note": "Restart request scheduled. If the panel disconnects briefly, wait 3-8 seconds and refresh.",
+          "service_ops.snapshot_title": "Full Users Snapshot",
+          "service_ops.snapshot_hint": "Refresh full users/bots snapshot in one click so user lists update immediately.",
+          "service_ops.snapshot_refresh": "Refresh Full Snapshot",
+          "service_ops.snapshot_capability.disabled": "Snapshot refresh is disabled. Set RESTART_API_MODE=docker_socket.",
+          "service_ops.snapshot_capability.enabled": "Snapshot refresh available (path: {path}).",
+          "service_ops.snapshot_confirm": "Refresh full users snapshot now? This will briefly restart Matrix service.",
           "service_ops.regwin_title": "Temporary Create Window",
           "service_ops.regwin_hint": "Temporarily open user/bot creation in the panel, then auto-close back to secure mode.",
           "service_ops.regwin_minutes": "Open for minutes",
@@ -1639,6 +1683,7 @@
           "common.bot_tag": "bot",
           "common.user_tag": "user",
           "action.reissue_token": "Reissue Token",
+          "action.reset_password": "Reset Password",
           "action.archive": "Archive",
           "action.remove": "Remove",
           "action.delete": "Delete",
@@ -1647,6 +1692,15 @@
           "token_refresh.bot_password_prompt": "Enter password for {user_id}, or leave blank to use cached password (cancel to abort).",
           "token_refresh.password_required": "Password is required.",
           "token_refresh.cancelled": "Cancelled.",
+          "password_reset.user_confirm": "Reset password for {user_id}? This will briefly restart Matrix service.",
+          "password_reset.processing": "Resetting password for {user_id} and briefly restarting Matrix...",
+          "password_reset.waiting": "Reset in progress ({seconds}s elapsed). Please do not click repeatedly.",
+          "password_reset.recovering": "Service recovering... retry {attempt}/{max}",
+          "password_reset.recovered": "Service recovered. Refreshing panel data...",
+          "password_reset.done": "Password reset completed (about {seconds}s).",
+          "password_reset.copied": "New password has been copied to clipboard.",
+          "password_reset.copy_manual": "Clipboard copy blocked by browser. Please copy password from the prompt.",
+          "password_reset.result_prompt": "New password for {user_id}. Please store it securely now:",
           "pager.info": "Page {page}/{total} ({count})",
           "status.processing": "Processing...",
           "status.error_prefix": "ERROR",
@@ -1889,6 +1943,9 @@
       const openSettingsBtnEl = document.getElementById("btn-open-settings");
       const closeSettingsBtnEl = document.getElementById("btn-close-settings");
       const topRefreshBtnEl = document.getElementById("btn-top-refresh");
+      const dashboardSnapshotRefreshBtnEl = document.getElementById("btn-dashboard-snapshot-refresh");
+      const dashboardSnapshotStatusEl = document.getElementById("dashboard-snapshot-status");
+      const userManageStatusEl = document.getElementById("user-manage-status");
       const spaceMemberSelectEl = document.getElementById("space-member-select");
       const roomMemberSelectEl = document.getElementById("room-member-select");
       const spaceChildSelectEl = document.getElementById("space-child-select");
@@ -1916,6 +1973,9 @@
       const restartReasonEl = document.getElementById("restart-reason");
       const restartCapabilityEl = document.getElementById("restart-capability");
       const restartStatusEl = document.getElementById("restart-status");
+      const snapshotRefreshBtnEl = document.getElementById("btn-snapshot-refresh");
+      const snapshotRefreshCapabilityEl = document.getElementById("snapshot-refresh-capability");
+      const snapshotRefreshStatusEl = document.getElementById("snapshot-refresh-status");
       const registrationMinutesEl = document.getElementById("registration-minutes");
       const registrationReasonEl = document.getElementById("registration-reason");
       const registrationScopeUsersEl = document.getElementById("registration-scope-users");
@@ -2086,6 +2146,22 @@
           return;
         }
         setStatus(restartCapabilityEl, t("service_ops.capability.disabled"), "warn");
+      }
+
+      function renderSnapshotRefreshCapability() {
+        if (!snapshotRefreshCapabilityEl) {
+          return;
+        }
+        const mode = String(state.config.restart_api_mode || "disabled");
+        if (mode === "docker_socket") {
+          setStatus(
+            snapshotRefreshCapabilityEl,
+            t("service_ops.snapshot_capability.enabled", { path: state.config.full_users_snapshot_path || "-" }),
+            "ok"
+          );
+          return;
+        }
+        setStatus(snapshotRefreshCapabilityEl, t("service_ops.snapshot_capability.disabled"), "warn");
       }
 
       function renderRegistrationCapability() {
@@ -2283,6 +2359,55 @@
       function setStatus(el, message, level = "ok") {
         el.textContent = message;
         el.className = `status ${level}`;
+      }
+
+      function setMatrixMaintenanceUiBusy(busy) {
+        if (snapshotRefreshBtnEl) {
+          snapshotRefreshBtnEl.disabled = busy;
+        }
+        if (dashboardSnapshotRefreshBtnEl) {
+          dashboardSnapshotRefreshBtnEl.disabled = busy;
+        }
+        document.querySelectorAll("button[data-maintenance-action='reset-user-password']").forEach((btn) => {
+          btn.disabled = busy;
+        });
+      }
+
+      async function copyTextToClipboard(text) {
+        const value = String(text || "").trim();
+        if (!value) {
+          return false;
+        }
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+          return false;
+        }
+        try {
+          await navigator.clipboard.writeText(value);
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      async function refreshAllDataAfterMaintenance(statusEl) {
+        const maxAttempts = 6;
+        const intervalMs = 1800;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            await refreshAllDataInternal();
+            return;
+          } catch (err) {
+            if (!isRetriableRefreshError(err) || attempt === maxAttempts) {
+              throw err;
+            }
+            setStatus(
+              statusEl,
+              t("password_reset.recovering", { attempt, max: maxAttempts }),
+              "warn"
+            );
+            await sleep(intervalMs);
+          }
+        }
       }
 
       function getHeaders(jsonBody = false) {
@@ -2490,6 +2615,7 @@
               <td>${escapeHtml(row.status || "active")}</td>
               <td>
                 <div class="table-actions">
+                  <button class="warn" data-maintenance-action="reset-user-password" onclick="resetUserPassword('${encoded}')">${escapeHtml(t("action.reset_password"))}</button>
                   <button class="secondary" onclick="reissueUserToken('${encoded}')">${escapeHtml(t("action.reissue_token"))}</button>
                   <button class="warn" onclick="setUserStatus('${encoded}','archived')">${escapeHtml(t("action.archive"))}</button>
                   <button class="danger" onclick="setUserStatus('${encoded}','deleted')">${escapeHtml(t("action.delete"))}</button>
@@ -2855,6 +2981,64 @@
         });
       }
 
+      async function resetUserPasswordApi(userId) {
+        const statusEl = userManageStatusEl;
+        const confirmed = window.confirm(t("password_reset.user_confirm", { user_id: userId }));
+        if (!confirmed) {
+          setStatus(statusEl, t("token_refresh.cancelled"), "warn");
+          return { skipped: true, note: t("token_refresh.cancelled") };
+        }
+
+        const startedAtMs = Date.now();
+        let waitingTicker = null;
+        setMatrixMaintenanceUiBusy(true);
+        try {
+          setStatus(statusEl, t("password_reset.processing", { user_id: userId }), "warn");
+          waitingTicker = window.setInterval(() => {
+            const elapsedSeconds = Math.floor((Date.now() - startedAtMs) / 1000);
+            setStatus(statusEl, t("password_reset.waiting", { seconds: elapsedSeconds }), "warn");
+          }, 2000);
+
+          const payload = await requestApi(`/api/users/${encodeURIComponent(userId)}/password/reset`, {
+            method: "POST",
+            headers: getHeaders(false),
+          });
+
+          if (waitingTicker !== null) {
+            window.clearInterval(waitingTicker);
+            waitingTicker = null;
+          }
+
+          const newPassword = String(payload.new_password || "").trim();
+          if (newPassword) {
+            const copied = await copyTextToClipboard(newPassword);
+            if (copied) {
+              setStatus(statusEl, t("password_reset.copied"), "ok");
+            } else {
+              setStatus(statusEl, t("password_reset.copy_manual"), "warn");
+            }
+            window.prompt(t("password_reset.result_prompt", { user_id: userId }), newPassword);
+          }
+
+          setStatus(statusEl, t("password_reset.recovered"), "warn");
+          await refreshAllDataAfterMaintenance(statusEl);
+          const elapsedValue = Number(payload.maintenance_seconds);
+          const elapsedSeconds = Number.isFinite(elapsedValue) && elapsedValue > 0
+            ? elapsedValue
+            : (Date.now() - startedAtMs) / 1000;
+          setStatus(statusEl, t("password_reset.done", { seconds: elapsedSeconds.toFixed(1) }), "ok");
+          return payload;
+        } catch (err) {
+          if (waitingTicker !== null) {
+            window.clearInterval(waitingTicker);
+          }
+          setStatus(statusEl, `${t("status.error_prefix")}: ${err}`, "err");
+          return null;
+        } finally {
+          setMatrixMaintenanceUiBusy(false);
+        }
+      }
+
       async function triggerServiceRestart(target) {
         const targetLabelMap = {
           matrix: t("service_ops.restart_matrix"),
@@ -2914,6 +3098,7 @@
         await loadOverview();
         await loadUserDirectory();
         renderRestartCapability();
+        renderSnapshotRefreshCapability();
         renderRegistrationCapability();
         renderRegistrationWindowStatus();
         return cfg;
@@ -2999,6 +3184,24 @@
           }
         }, 3000);
         return payload;
+      }
+
+      async function refreshFullUsersSnapshot() {
+        const confirmed = window.confirm(t("service_ops.snapshot_confirm"));
+        if (!confirmed) {
+          return { skipped: true };
+        }
+        setMatrixMaintenanceUiBusy(true);
+        try {
+          const payload = await requestApi("/api/ops/full-users-snapshot/refresh", {
+            method: "POST",
+            headers: getHeaders(false),
+          });
+          await refreshAllDataInternal();
+          return payload;
+        } finally {
+          setMatrixMaintenanceUiBusy(false);
+        }
       }
 
       function updateBreadcrumb() {
@@ -3092,6 +3295,7 @@
       window.setUserStatus = (encodedUserId, status) => setUserStatusApi(decodeURIComponent(encodedUserId), status);
       window.reissueBotToken = (encodedUserId) => reissueBotAccessTokenApi(decodeURIComponent(encodedUserId));
       window.reissueUserToken = (encodedUserId) => reissueUserAccessTokenApi(decodeURIComponent(encodedUserId));
+      window.resetUserPassword = (encodedUserId) => resetUserPasswordApi(decodeURIComponent(encodedUserId));
 
       async function checkApiConfig() {
         return withStatus(configStatusEl, async () => {
@@ -3106,6 +3310,7 @@
             }
           }
           renderRestartCapability();
+          renderSnapshotRefreshCapability();
           renderRegistrationCapability();
           renderRegistrationWindowStatus();
           return cfg;
@@ -3197,6 +3402,13 @@
         refreshAllData();
       });
 
+      dashboardSnapshotRefreshBtnEl.addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(dashboardSnapshotStatusEl, refreshFullUsersSnapshot);
+      });
+
       document.getElementById("btn-restart-matrix").addEventListener("click", () => {
         if (!ensureTokenBeforeConfigAction()) {
           return;
@@ -3216,6 +3428,13 @@
           return;
         }
         triggerServiceRestart("stack");
+      });
+
+      document.getElementById("btn-snapshot-refresh").addEventListener("click", () => {
+        if (!ensureTokenBeforeConfigAction()) {
+          return;
+        }
+        withStatus(snapshotRefreshStatusEl, refreshFullUsersSnapshot);
       });
 
       document.getElementById("btn-registration-open").addEventListener("click", () => {
@@ -3436,12 +3655,20 @@
 
       document.getElementById("btn-user-create").addEventListener("click", () =>
         withStatus(document.getElementById("user-create-status"), async () => {
+          const rawUserPassword = document.getElementById("user-password").value;
+          const userPassword = rawUserPassword.trim();
+          if (!userPassword) {
+            const confirmed = window.confirm(t("users_manage.blank_password_confirm"));
+            if (!confirmed) {
+              throw new Error(t("users_manage.blank_password_cancelled"));
+            }
+          }
           const createResult = await requestApi("/api/users", {
             method: "POST",
             headers: getHeaders(true),
             body: JSON.stringify({
               username: document.getElementById("user-username").value.trim(),
-              password: document.getElementById("user-password").value.trim() || null,
+              password: userPassword || null,
               display_name: document.getElementById("user-display-name").value.trim() || null
             })
           });
@@ -3449,6 +3676,13 @@
           const roomIds = uniqueList(getSelectedValues(userCreateRoomsSelectEl));
           const invitedRooms = [];
           const userId = createResult.user_id || "";
+          const passwordSource = String(createResult.password_source || "");
+          if (passwordSource === "auto_generated") {
+            const generatedPassword = String(createResult.generated_password || "").trim();
+            if (generatedPassword) {
+              window.prompt(t("users_manage.generated_password_prompt", { user_id: userId }), generatedPassword);
+            }
+          }
           if (userId && roomIds.length > 0) {
             for (const roomId of roomIds) {
               await requestApi("/api/users/invite", {

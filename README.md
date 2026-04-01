@@ -115,7 +115,7 @@ All endpoints below require `Authorization: Bearer <CONTROL_API_TOKEN>`.
 - `GET /api/users/full` (full local users snapshot)
 - `POST /api/spaces`
 - `POST /api/rooms`
-- `POST /api/users` (only when `USER_CREATE_MODE=legacy_register`)
+- `POST /api/users` (only when `USER_CREATE_MODE=legacy_register`; response includes `password_source`, and `generated_password` when password is auto-generated)
 - `POST /api/users/invite`
 - `POST /api/bots` (only when `BOT_CREATE_MODE=legacy_register`)
 - `POST /api/bots/invite`
@@ -127,7 +127,9 @@ All endpoints below require `Authorization: Bearer <CONTROL_API_TOKEN>`.
 - `POST /api/users/{user_id}/status` (`active|archived|deleted`, logical status in control-plane)
 - `POST /api/bots/{user_id}/access-token` (issue a new bot access token via password login; uses cached bot password if request password is empty)
 - `POST /api/users/{user_id}/access-token` (issue a new user access token via password login)
+- `POST /api/users/{user_id}/password/reset` (admin-side reset via Conduwuit command; briefly restarts Matrix service; returns `maintenance_seconds`)
 - `POST /api/ops/restart` (`matrix|control_api|stack`, disabled by default)
+- `POST /api/ops/full-users-snapshot/refresh` (refresh full local users snapshot from Conduwuit admin command)
 - `GET /api/ops/registration-window`
 - `POST /api/ops/registration-window/open` (temporary user/bot create window, auto-close)
 - `POST /api/ops/registration-window/close`

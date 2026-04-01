@@ -62,7 +62,7 @@ trap restore_stack EXIT
 raw_output="$(timeout --signal=TERM 40s docker compose -f "$COMPOSE_FILE" run --rm --no-deps matrix --config /etc/conduwuit/conduwuit.toml --execute "users list-users" 2>&1 || true)"
 clean_output="$(printf "%s" "$raw_output" | sed -r 's/\x1B\[[0-9;]*[A-Za-z]//g')"
 
-user_lines="$(printf "%s\n" "$clean_output" | sed -n 's/^\(@[^[:space:]]*:[^[:space:]]*\)$/\1/p' | sort -u)"
+user_lines="$(printf "%s\n" "$clean_output" | sed -n 's/^[[:space:]]*\(@[^[:space:]]*:[^[:space:]]*\)[[:space:]]*$/\1/p' | sort -u)"
 if [ -z "$user_lines" ]; then
   echo "Failed to parse local users from admin output." >&2
   printf "%s\n" "$clean_output" >&2
